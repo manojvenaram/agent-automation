@@ -1,0 +1,21 @@
+{
+    "hardware": {
+        "profile": "BALANCED",
+        "total_ram_mb": 7914.80078125,
+        "cpu_cores": 6,
+        "logical_cores": 12,
+        "os": "Windows",
+        "gpu_available": true,
+        "gpu_name": "NVIDIA GeForce RTX 3050 Laptop GPU",
+        "gpu_vram_mb": 4096.0
+    },
+    "recommended_llm": "qwen2.5:0.5b",
+    "recommended_embedding_model": "paraphrase-MiniLM-L3-v2",
+    "recommended_whisper_model": "tiny",
+    "embedding_batch_size": 1,
+    "max_concurrent_ai_tasks": 1,
+    "render_mode": "standard",
+    "benchmark_results": {
+        "embedding_latency_ms": 35327.943563461304
+    }
+}

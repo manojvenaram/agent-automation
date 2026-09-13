@@ -1,0 +1,78 @@
+name: Daily Shorts Automation
+
+on:
+  schedule:
+    # Run every day at 15:00 UTC (10:00 AM EST)
+    - cron: '0 15 * * *'
+  
+  # Allow manual trigger from the GitHub Actions UI
+  workflow_dispatch:
+
+jobs:
+  generate_and_publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install system dependencies (FFmpeg)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Prepare credentials directory
+        run: |
+          mkdir -p credentials
+          
+          # Optional: Reconstruct client_secrets.json if you store it in a secret
+          # echo '${{ secrets.YOUTUBE_CLIENT_SECRETS }}' > credentials/client_secrets.json
+          
+          # Optional: Reconstruct token.pickle base64 if you store it in a secret
+          # echo '${{ secrets.YOUTUBE_TOKEN_PICKLE_BASE64 }}' | base64 -d > credentials/token.pickle
+
+      - name: Run Daily Self-Improvement Review
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          LLM_PROVIDER: "gemini"
+          ENVIRONMENT: "production"
+        run: |
+          python app.py review
+
+      - name: Run Autonomous Shorts Agent
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          LLM_PROVIDER: "gemini"
+          AUTO_PUBLISH: "true"
+          ENVIRONMENT: "production"
+        run: |
+          python app.py run-agent --auto-publish
+
+      - name: Commit Self-Improvement Memory
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Add the database or any other state files the agent modifies
+          git add shorts_agent.db
+          
+          # Only commit if there are changes
+          if ! git diff --staged --quiet; then
+            git commit -m "chore(agent): update self-improving memory and strategy weights"
+            git push
+          else
+            echo "No memory changes to commit."
+          fi

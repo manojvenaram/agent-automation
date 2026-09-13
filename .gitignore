@@ -1,0 +1,30 @@
+# Virtual environment
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+
+# Credentials & secrets
+credentials/
+tokens/
+client_secrets.json
+token.pickle
+.env
+
+# Databases & local logs
+*.db
+*.sqlite
+*.sqlite3
+*.log
+logs/
+
+# Large render directories
+projects/*/render/*.mp4
+projects/*/temp/
+
+# OS specific
+Thumbs.db
+Desktop.ini
+.DS_Store
