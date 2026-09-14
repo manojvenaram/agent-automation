@@ -1,224 +1,110 @@
-# ⚡ Autonomous Zero-Paid-API YouTube Shorts Agent
+<div align="center">
+  <img src="https://upload.wikimedia.org/wikipedia/commons/e/e1/YouTube_play_buttom_icon_%282013-2017%29.svg" alt="YouTube Shorts Agent" width="120" />
 
-A production-grade, local-first autonomous AI production agent that discovers viral curiosity topics, conducts factual research on free public APIs, writes retention-engineered scripts, fact-checks assertions, synthesizes neural voiceover, collects public domain & procedural visual assets, composes 9:16 vertical 1080x1920 30FPS MP4 videos with FFmpeg, burns in animated captions, mixes and ducks background music, executes comprehensive Quality Control, and manages publishing through official YouTube Data API.
+  # 🚀 SensorySlice: Autonomous YouTube Shorts Agent
 
-**Absolute Cost Requirement**: Operates with **$0 paid APIs, $0 monthly AI subscriptions, $0 paid TTS, $0 paid video APIs**.
+  **A 100% Free, Fully Autonomous AI Channel Automation Pipeline**
 
----
+  [![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-Automated-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)](https://github.com/features/actions)
+  [![Kaggle GPU](https://img.shields.io/badge/Kaggle_GPU-Enabled-20BEFF?style=for-the-badge&logo=kaggle&logoColor=white)](https://www.kaggle.com/)
+  [![Telegram Bot](https://img.shields.io/badge/Telegram_Bot-Integrated-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://core.telegram.org/bots)
+  [![Cost](https://img.shields.io/badge/Cost-$0.00-00C853?style=for-the-badge&logo=cashapp&logoColor=white)](#)
 
-## 🌟 Architecture & Workflow
-
-```
-USER CONFIGURATION
-      ↓
-TOPIC DISCOVERY (TrendScoutAgent)
-      ↓
-TOPIC EVALUATION (TopicEvaluatorAgent: Novelty, Curiosity, Educational Value, Hook, Visuals)
-      ↓
-RESEARCH (TopicResearchAgent / Wikipedia REST & Public APIs)
-      ↓
-HOOK GENERATION (HookAgent: 0–3s retention hook)
-      ↓
-SCRIPT GENERATION (ScriptWriterAgent: 130–160 WPM, strictly structured)
-      ↓
-FACT CHECKING (FactCheckerAgent: assertion extraction & threshold confidence scoring)
-      ↓
-VOICEOVER (VoiceAgent: edge-tts neural voice & pyttsx3 offline fallback)
-      ↓
-VISUALS (VisualResearchAgent: Wikimedia Commons / CC0 procedural generation)
-      ↓
-CAPTIONS (CaptionAgent: ASS/SRT subtitles styled for YouTube Shorts safe zone)
-      ↓
-VIDEO EDITING (VideoEditorAgent: FFmpeg 1080x1920 9:16 30FPS Ken Burns & music ducking)
-      ↓
-QUALITY CONTROL (QualityControlAgent: technical, audio, captions, content checks & self-repair)
-      ↓
-METADATA (MetadataAgent: 5 titles, descriptions, hashtags, tags, pinned comment)
-      ↓
-HUMAN APPROVAL / AUTO-PUBLISH (PublisherAgent: official YouTube OAuth2)
-```
+</div>
 
 ---
 
-## 💻 Requirements
+## 🌟 What is this?
 
-- **Operating System**: Windows 10/11, macOS, or Linux.
-- **Python**: 3.10 to 3.12.
-- **FFmpeg**: Bundled automatically via `imageio-ffmpeg` or detected from system PATH.
-- **Ollama**: Locally running Ollama (`http://localhost:11434`) with model (e.g., `qwen2.5:3b`, `gemma4`, `llama3.2`).
+**SensorySlice** is a completely autonomous YouTube channel manager. You set it up once, and it will run forever. 
 
----
+Every day, the agent wakes up and:
+1. 🧠 **Brainstorms** a highly engaging, viral curiosity topic.
+2. 🕵️‍♂️ **Researches** the facts and writes a fast-paced, retention-engineered script.
+3. 🔬 **Fact-Checks** itself using AI. If confidence is below 80%, it rewrites the script.
+4. 🎙️ **Synthesizes** a realistic AI voiceover using Microsoft Edge Neural TTS.
+5. 🖼️ **Sources** copyright-free background videos from Pexels API.
+6. 🎬 **Edits** the final video (1080x1920 9:16) using FFmpeg, adding background music and perfectly timed, dynamic captions.
+7. 🚀 **Uploads** the final video to YouTube via the official YouTube Data API.
+8. 📲 **Notifies** you via Telegram, uploading the `.mp4` straight to your phone.
 
-## 🚀 Quick Start (Exact Commands)
-
-### 1. Set Up Virtual Environment & Dependencies
-```powershell
-# Create virtual environment
-python -m venv .venv
-
-# Activate virtual environment
-# Windows PowerShell:
-.venv\Scripts\Activate.ps1
-# Windows CMD:
-.venv\Scripts\activate.bat
-# Linux/macOS:
-source .venv/bin/activate
-
-# Install requirements
-pip install -r requirements.txt
-```
-
-### 2. Verify Environment With Setup Wizard
-```powershell
-python app.py setup
-```
-Expected output:
-```text
-============================================================
- AUTONOMOUS YOUTUBE SHORTS AGENT - SETUP WIZARD
-============================================================
-[OK] Python detected: v3.12.10
-[OK] FFmpeg detected: .../ffmpeg-win-x86_64-v7.1.exe
-[OK] Ollama connected: http://localhost:11434
-[OK] Ollama models available: qwen2.5:3b, gemma4:latest
-[OK] Active model selected: qwen2.5:3b
-[OK] TTS Engine configured: edge-tts (Voice: en-US-ChristopherNeural)
-[OK] Projects workspace: .../projects
-[OK] Royalty-free music library: .../assets/music
-[!] YouTube OAuth not configured (Video generation works 100% locally).
-============================================================
- System is fully ready for autonomous Shorts production!
- Run: 'python app.py run-agent' to produce your first video.
-============================================================
-```
-
-### 3. Launch Web Studio Dashboard
-```powershell
-python app.py dashboard
-```
-Open your browser to: **`http://127.0.0.1:8000/`**
-
-### 4. Produce Your First Short (One-Click CLI)
-```powershell
-# Autonomous topic discovery and generation:
-python app.py run-agent
-
-# Or target a specific test topic:
-python app.py run-agent --topic "Why does space smell like something burning?"
-```
+**Best of all? It costs exactly $0.00 to run.**
 
 ---
 
-## ⚙️ Free Local Components vs Optional YouTube Integration
+## ✨ Core Features
 
-| Component | Provider / Tool | Cost | Auth Required? |
-| :--- | :--- | :--- | :--- |
-| **Local LLM** | Ollama (`qwen2.5:3b`) | **$0** | No API Key |
-| **Video Engine** | FFmpeg 7.1 (`imageio-ffmpeg`) | **$0** | No API Key |
-| **TTS Engine** | Microsoft Edge Neural (`edge-tts`) / pyttsx3 | **$0** | No API Key |
-| **Fact Research** | Wikipedia REST API & Wikimedia | **$0** | No API Key |
-| **Subtitles** | Advanced SubStation Alpha (`.ass`) & SRT | **$0** | No API Key |
-| **Visual Fallback** | Pillow Procedural Graphics Engine | **$0** | No API Key |
-| **Background Audio** | Ambient Harmonic Synthesis | **$0** | No API Key |
-| **YouTube Upload** | Google YouTube Data API v3 | **$0** | OAuth2 Client Secrets |
+- 💸 **100% Free Stack**: Uses `Gemini-2.5-Flash` (Free Tier), Pexels API (Free), Edge-TTS (Free), and FFmpeg (Open Source). No paid subscriptions required.
+- 🧠 **TurboVec Semantic Memory**: The agent remembers what topics it has already covered. It builds a semantic index of its memory and stores it in SQLite, so it never uploads the same video twice.
+- 🚨 **Anti-Hallucination Quality Control**: The agent evaluates its own scripts. If it hallucinates or lacks factual confidence, the video is flagged as `NEEDS_REVIEW` and blocked from YouTube to protect your channel's reputation.
+- 📱 **Telegram Bot Integration**: Directly uploads the finished AI video to your Telegram chat. If a video fails the fact-checker, you still get it on your phone so you can manually upload it if you like it!
 
 ---
 
-## 📺 YouTube Publishing Configuration
+## 🏗️ Deployment Options (Choose Your Weapon)
 
-Video generation is **100% functional locally without YouTube credentials**.
-When you are ready to publish videos to your YouTube channel:
+We built three different ways to run this agent depending on your needs.
 
-1. Visit [Google Cloud Console](https://console.cloud.google.com/).
-2. Create a project and enable the **YouTube Data API v3**.
-3. Under **Credentials**, create an **OAuth 2.0 Client ID** (Desktop Application).
-4. Download the JSON file and save it to:
-   ```text
-   credentials/client_secrets.json
-   ```
-5. On first upload, the application will open your browser for one-time Google authorization.
-6. The authorization token is saved securely in `credentials/token.pickle` (gitignored).
-7. Default privacy status is strictly `private` to avoid accidental public publishing.
+### Option A: GitHub Actions (Recommended for 100% Set-and-Forget)
+The ultimate hands-off approach. The code runs on Microsoft's servers entirely for free.
+- **Schedule:** Configured to run automatically 4 times a day (`0 */6 * * *`).
+- **Memory:** Uses `actions/cache` to persist the agent's SQLite brain and TurboVec embeddings across ephemeral runs.
+- **Setup:** Add your API Keys (`GEMINI_API_KEY`, `PEXELS_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`) and your base64-encoded Google OAuth files to your GitHub Repository Secrets.
 
----
+### Option B: Kaggle Notebooks (Recommended for Blazing Fast GPU Rendering)
+Need the videos rendered in 10 seconds instead of 10 minutes? Run it on a free NVIDIA T4 GPU.
+- **Schedule:** Can be scheduled daily using Kaggle's built-in cron.
+- **Memory:** Zips the `data/` folder into an `agent_memory_backup.zip` that can be fed back into the notebook as a Private Dataset.
+- **Setup:** Create a Kaggle Notebook, enable GPU T4, load your API keys into Kaggle Secrets, and paste the `shorts_agent_kaggle.ipynb` code.
 
-## 🧪 Testing & Verification
-
-Run the automated test suite:
-```powershell
-pytest tests/ -v
-```
-The test suite tests:
-- Configuration parsing and environmental overrides (`tests/test_config.py`)
-- SQLite database integrity, topic memory deduplication, claims, scripts (`tests/test_database.py`)
-- Specialized agent logic: TrendScout, TopicEvaluator, HookAgent, ScriptWriter, FactChecker, QualityControl (`tests/test_agents.py`)
-- Core services: FFmpeg resolution, procedural visuals, subtitle generators, Wikipedia research (`tests/test_services.py`)
-- FastAPI REST endpoints (`tests/test_api.py`)
+### Option C: Local Windows/Mac/Linux
+Want to watch the magic happen live on your own machine?
+1. Clone the repo and install dependencies: `pip install -r requirements.txt`.
+2. Add your `.env` file with your API keys.
+3. Run `python app.py run-agent` and watch the CLI output!
 
 ---
 
-## 📁 Project File Structure
+## 🛠️ Required API Keys & Secrets
+
+To get this running for free, you need to grab the following keys and add them to your environment variables or Secrets:
+
+| Secret Name | Where to get it | Cost |
+| :--- | :--- | :--- |
+| `GEMINI_API_KEY` | [Google AI Studio](https://aistudio.google.com/) | Free |
+| `PEXELS_API_KEY` | [Pexels Developers](https://www.pexels.com/api/) | Free |
+| `TELEGRAM_BOT_TOKEN`| Message `@BotFather` on Telegram | Free |
+| `TELEGRAM_CHAT_ID` | Message your Bot, then check `api.telegram.org/bot<TOKEN>/getUpdates` | Free |
+| *(YouTube OAuth)* | Google Cloud Console (Desktop App Credentials) | Free |
+
+*(Note: YouTube Auto-Publish requires generating `client_secrets.json` and a `token.pickle` file locally first, then encoding them to base64 for GitHub/Kaggle secrets.)*
+
+---
+
+## 📁 Repository Structure
 
 ```text
-d:\aiworksspace\vido\
-├── app.py                     # Unified CLI and Studio launcher
-├── requirements.txt           # Pinned dependency requirements
-├── .env.example               # Configuration template
-├── .gitignore                 # Secrets, media, and DB ignore rules
-├── README.md                  # Comprehensive operating documentation
-├── sample.mp4                 # Validated 1080x1920 30FPS sample Short
-├── sample_script.txt          # Verified narration script
-├── sample_sources.md          # Complete sources and licensing record
-├── sample_metadata.json       # Generated titles, hashtags, description
+├── app.py                     # The main entrypoint
+├── requirements.txt           # Python dependencies
+├── .github/workflows/         # GitHub Actions pipeline (runs 4x a day)
 ├── backend/
-│   ├── core/
-│   │   ├── config.py          # Centralized configuration & defaults
-│   │   ├── database.py        # Thread-safe SQLite schema & CRUD
-│   │   ├── logging.py         # Structured logging
-│   │   ├── orchestrator.py    # State machine & auto-repair loop
-│   │   └── jobs.py            # Async background job queue
-│   ├── agents/
-│   │   ├── trend_scout.py     # Topic discovery & memory deduplication
-│   │   ├── topic_evaluator.py # 8-dimension engagement evaluation
-│   │   ├── researcher.py      # Wikipedia research & HookAgent
-│   │   ├── script_writer.py   # 130-160 WPM Shorts script writer
-│   │   ├── fact_checker.py    # Claim verification & confidence scoring
-│   │   ├── voice_agent.py     # Neural speech synthesis & normalization
-│   │   ├── visual_agent.py    # Asset acquisition & procedural fallback
-│   │   ├── caption_agent.py   # Synchronized ASS subtitle formatting
-│   │   ├── video_editor.py    # FFmpeg 9:16 composition & audio ducking
-│   │   ├── metadata_agent.py  # Titles, hashtags, tags, descriptions
-│   │   ├── quality_control.py # Technical & content QC inspection
-│   │   ├── publisher.py       # Official YouTube upload & demo mode
-│   │   └── scheduler.py       # Recurring daily task scheduler
-│   ├── services/
-│   │   ├── ffmpeg_service.py  # FFmpeg filtergraphs, Ken Burns, probe
-│   │   ├── ollama_service.py  # Ollama connection & JSON schema mode
-│   │   ├── tts_service.py     # Edge-TTS & pyttsx3 fallback
-│   │   ├── research_service.py# Wikipedia & Wikimedia APIs
-│   │   ├── asset_service.py   # Media downloads & procedural Pillow visuals
-│   │   ├── whisper_service.py # Subtitle generation & rhythm alignment
-│   │   └── youtube_service.py # Official Google OAuth2 & resumable upload
-│   ├── models/
-│   │   └── __init__.py        # Pydantic schemas (Project, Script, Claims, QC)
-│   └── api/
-│       └── routes.py          # FastAPI REST endpoints & media stream
-├── frontend/
-│   ├── index.html             # Studio single-page application
-│   ├── styles.css             # Modern dark glassmorphism styling
-│   └── app.js                 # Studio frontend controller & polling
-├── projects/                  # Generated projects, scripts, renders, logs
-├── assets/
-│   └── music/                 # Royalty-free audio tracks
-├── credentials/               # Google OAuth secrets & tokens (gitignored)
-└── tests/                     # Automated pytest test suite
+│   ├── core/                  # Configuration, Database, and Orchestrator
+│   ├── agents/                # LLM Agents (TrendScout, ScriptWriter, FactChecker)
+│   ├── services/              # API wrappers (YouTube, Telegram, FFmpeg, TTS)
+│   └── memory/                # TurboVec embedding engine & SQLite manager
+├── projects/                  # Rendered MP4s and scripts go here
+└── credentials/               # Google OAuth files go here
 ```
 
 ---
 
-## 🔒 Security & Privacy
+## 🤖 The Self-Improvement Loop
 
-- **No Hard-coded Secrets**: Zero API keys or tokens are stored in source code.
-- **Git Ignored**: `credentials/`, `tokens/`, `*.pickle`, `*.env`, `*.db` are strictly excluded from source control.
-- **Safe Defaults**: `AUTO_PUBLISH=false` and `YOUTUBE_PRIVACY_STATUS=private` ensure no accidental public publishing occurs while testing.
-- **Official Google OAuth2**: Uploads strictly adhere to official Google OAuth authentication guidelines.
+At the end of every day, the agent runs a **Daily Review**. 
+It analyzes the performance of its own videos, updates the weights of its `portfolio_mix` (e.g., doing more Science videos if History isn't performing), and records its findings in its permanent `shorts_agent.db`. This means the longer you leave the agent running, the smarter it gets at picking topics!
+
+---
+
+<div align="center">
+  <i>Built completely autonomously by <b>Google DeepMind's Antigravity AI</b>.</i>
+</div>
