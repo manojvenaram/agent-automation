@@ -30,6 +30,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           
+      - name: Cache Agent Memory (Self-Improving State)
+        uses: actions/cache@v3
+        with:
+          path: data/
+          key: agent-memory-${{ github.run_id }}
+          restore-keys: |
+            agent-memory-
+          
       - name: Reconstruct Secure API Credentials
         run: |
           mkdir -p credentials
