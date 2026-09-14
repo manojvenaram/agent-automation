@@ -30,6 +30,30 @@ Every day, the agent wakes up and:
 
 **Best of all? It costs exactly $0.00 to run.**
 
+### 🔄 Architecture & Workflow Diagram
+
+```mermaid
+graph TD
+    A[🕒 GitHub Actions / Kaggle Cron] --> B(🧠 Topic Discovery & TurboVec Memory Check)
+    B --> C{Unique Topic?}
+    C -- No --> B
+    C -- Yes --> D(📚 AI Fact Research & Script Generation)
+    D --> E{Quality Control & Fact Check > 80%?}
+    E -- No --> F[⚠️ Flag as NEEDS_REVIEW]
+    E -- Yes --> G(🎙️ Edge-TTS Neural Voiceover)
+    G --> H(🖼️ Pexels Background Video Sourcing)
+    H --> I(🎬 FFmpeg Video Compilation & ASS Captions)
+    I --> J[✅ Rendered 1080x1920 MP4]
+    
+    J --> K{AUTO_PUBLISH?}
+    K -- Yes --> L[🚀 Upload to YouTube via Data API]
+    K -- No --> M
+    L --> M[📲 Upload MP4 directly to Telegram Bot]
+    F --> M
+    
+    M --> N[(💾 Save Memory to SQLite & TurboVec)]
+```
+
 ---
 
 ## ✨ Core Features
