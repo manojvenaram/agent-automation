@@ -2,8 +2,8 @@ name: YouTube Shorts Agent Autopilot
 
 on:
   schedule:
-    # Runs at 14:00 UTC (2:00 PM UTC) every day
-    - cron: '0 14 * * *'
+    # Runs every 8 hours (3 times a day)
+    - cron: '0 */8 * * *'
   workflow_dispatch: # Allows you to run it manually from the GitHub UI
 
 jobs:
