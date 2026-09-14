@@ -125,6 +125,10 @@ class AppConfig(BaseModel):
     youtube_privacy_status: str = Field(default="private")
     youtube_category_id: str = Field(default="28")  # 28 = Science & Technology
 
+    # Telegram Bot Integration
+    telegram_bot_token: str = Field(default="")
+    telegram_chat_id: str = Field(default="")
+    
     # Scheduler Settings
     scheduler_enabled: bool = Field(default=False)
     posting_time: str = Field(default="18:00")
@@ -187,6 +191,8 @@ def load_config() -> AppConfig:
         "YOUTUBE_PRIVACY_STATUS": "youtube_privacy_status",
         "YOUTUBE_CATEGORY_ID": "youtube_category_id",
         "SCHEDULER_ENABLED": lambda v: ("scheduler_enabled", v.lower() == "true"),
+        "TELEGRAM_BOT_TOKEN": "telegram_bot_token",
+        "TELEGRAM_CHAT_ID": "telegram_chat_id",
         "POSTING_TIME": "posting_time",
         "TIMEZONE": "timezone",
         "MEMORY_BACKEND": "memory_backend",

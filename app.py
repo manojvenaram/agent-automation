@@ -84,6 +84,8 @@ def cmd_setup():
     print("=" * 60)
 
 
+from backend.services.telegram_service import telegram_service
+
 def cmd_run_agent(args):
     """Run full automated production pipeline."""
     print(f"\n🚀 Launching Autonomous Production Pipeline...")
@@ -112,6 +114,24 @@ def cmd_run_agent(args):
     if project.youtube_url:
         print(f"YouTube URL:   {project.youtube_url}")
     print("=" * 60)
+
+    # --- Telegram Notification ---
+    if telegram_service.is_enabled():
+        print("📲 Sending Telegram notification...")
+        status_icon = "✅" if project.state.value == "PUBLISHED" else ("⚠️" if project.state.value == "NEEDS_REVIEW" else "🎬")
+        message = f"<b>{status_icon} Agent Run Complete</b>\n\n"
+        message += f"<b>Title:</b> {project.title}\n"
+        message += f"<b>Category:</b> {project.category}\n"
+        message += f"<b>Quality Score:</b> {project.quality_score}/100\n"
+        message += f"<b>State:</b> {project.state.value}\n"
+        
+        if project.youtube_url:
+            message += f"\n📺 <b>YouTube URL:</b> {project.youtube_url}"
+        
+        if project.video_path and Path(project.video_path).exists():
+            telegram_service.send_video(project.video_path, caption=message)
+        else:
+            telegram_service.send_message(message)
 
 
 def cmd_dashboard(args):
