@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://upload.wikimedia.org/wikipedia/commons/e/e1/YouTube_play_buttom_icon_%282013-2017%29.svg" alt="YouTube Shorts Agent" width="120" />
+  <img src="https://img.icons8.com/color/144/000000/youtube-play.png" alt="YouTube Shorts Agent" width="120" />
 
   # 🚀 SensorySlice: Autonomous YouTube Shorts Agent
 
