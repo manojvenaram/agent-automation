@@ -69,12 +69,12 @@ class LLMService:
             if json_mode:
                 config.response_mime_type = "application/json"
             
-            # TODO: Handle timeout if google-genai supports it, else rely on defaults
-            response = self.client.models.generate_content(
+            # Use chats.create to avoid the AFC warning in Models.generate_content
+            chat = self.client.chats.create(
                 model=self.model_name,
-                contents=prompt,
                 config=config,
             )
+            response = chat.send_message(prompt)
             return response.text
         except Exception as err:
             logger.warning(f"Gemini request failed ({err}). Utilizing rule-based fallback generator.")
