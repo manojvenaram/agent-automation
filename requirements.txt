@@ -22,3 +22,5 @@ psutil>=6.0.0
 nvidia-ml-py>=12.535.133
 numpy>=1.24.0
 turbovec>=0.1.0
+torch>=2.0.0
+sentence-transformers>=2.2.0
