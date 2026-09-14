@@ -8,17 +8,17 @@ and deterministic fallback generation if API is not responding.
 import json
 import re
 from typing import Any, Dict, List, Optional
-import httpx
+from google import genai
+from google.genai import types
 from backend.core.config import settings
 from backend.core.logging import logger
 from backend.core.resource_manager import resource_manager
 
-
 class LLMService:
     def __init__(self):
         self.api_key = settings.gemini_api_key
-        self.model_name = "gemini-1.5-flash"
-        self.base_url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_name}:generateContent"
+        self.model_name = "gemini-2.5-flash"
+        self.client = genai.Client(api_key=self.api_key) if self.api_key else None
 
     def is_available(self) -> bool:
         return bool(self.api_key)
@@ -57,44 +57,25 @@ class LLMService:
         temperature: Optional[float] = None,
         timeout: Optional[int] = None,
     ) -> str:
-        if not self.api_key:
+        if not self.client:
             logger.warning("Gemini API key is missing. Utilizing rule-based fallback generator.")
             return self._generate_fallback(prompt, json_mode)
 
-        url = f"{self.base_url}?key={self.api_key}"
-        
-        # Build contents array
-        contents = []
-        if system_prompt:
-            contents.append({"role": "user", "parts": [{"text": "System Instructions: " + system_prompt}]})
-            contents.append({"role": "model", "parts": [{"text": "Understood. I will follow the instructions."}]})
-        
-        contents.append({"role": "user", "parts": [{"text": prompt}]})
-
-        payload = {
-            "contents": contents,
-            "generationConfig": {
-                "temperature": temperature if temperature is not None else settings.llm_temperature,
-            }
-        }
-        
-        if json_mode:
-            payload["generationConfig"]["responseMimeType"] = "application/json"
-
-        req_timeout = timeout or settings.llm_timeout
-
         try:
-            with httpx.Client(timeout=float(req_timeout)) as client:
-                res = client.post(url, json=payload)
-                if res.status_code == 200:
-                    data = res.json()
-                    candidates = data.get("candidates", [])
-                    if candidates:
-                        parts = candidates[0].get("content", {}).get("parts", [])
-                        if parts:
-                            return parts[0].get("text", "").strip()
-                else:
-                    logger.warning(f"Gemini returned HTTP {res.status_code}: {res.text}")
+            config = types.GenerateContentConfig(
+                temperature=temperature if temperature is not None else settings.llm_temperature,
+                system_instruction=system_prompt,
+            )
+            if json_mode:
+                config.response_mime_type = "application/json"
+            
+            # TODO: Handle timeout if google-genai supports it, else rely on defaults
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt,
+                config=config,
+            )
+            return response.text
         except Exception as err:
             logger.warning(f"Gemini request failed ({err}). Utilizing rule-based fallback generator.")
 
