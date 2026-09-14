@@ -1,0 +1,44 @@
+name: YouTube Shorts Agent Autopilot
+
+on:
+  schedule:
+    # Runs at 14:00 UTC (2:00 PM UTC) every day
+    - cron: '0 14 * * *'
+  workflow_dispatch: # Allows you to run it manually from the GitHub UI
+
+jobs:
+  run-agent:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          
+      - name: Install System Dependencies (FFmpeg)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name: Reconstruct Secure API Credentials
+        run: |
+          mkdir -p credentials
+          echo "${{ secrets.GOOGLE_CLIENT_SECRETS_B64 }}" | base64 -d > credentials/client_secrets.json
+          echo "${{ secrets.GOOGLE_TOKEN_PICKLE_B64 }}" | base64 -d > credentials/token.pickle
+
+      - name: Run Autonomous Agent
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+        run: |
+          python app.py run-agent
