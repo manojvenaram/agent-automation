@@ -20,3 +20,5 @@ duckduckgo-search>=6.2.0
 feedparser>=6.0.10
 psutil>=6.0.0
 nvidia-ml-py>=12.535.133
+numpy>=1.24.0
+turbovec>=0.1.0
