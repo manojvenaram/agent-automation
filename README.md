@@ -106,5 +106,5 @@ It analyzes the performance of its own videos, updates the weights of its `portf
 ---
 
 <div align="center">
-  <i>Built completely autonomously by <b>Google DeepMind's Antigravity AI</b>.</i>
+  <i>Built with ❤️ by <b>Manoj Venaram</b>.</i>
 </div>
