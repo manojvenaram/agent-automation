@@ -267,6 +267,34 @@ def init_db():
             """
         )
 
+        # Content Brain: Aesthetic Style Performance Intelligence
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS aesthetic_scores (
+                style_name TEXT PRIMARY KEY,
+                score REAL DEFAULT 75.0,
+                lifetime_videos INTEGER DEFAULT 0,
+                avg_quality_score REAL DEFAULT 75.0,
+                avg_retention REAL DEFAULT 70.0,
+                updated_at TEXT NOT NULL
+            );
+            """
+        )
+
+        # Content Brain: Script Format Performance Intelligence
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS format_scores (
+                format_name TEXT PRIMARY KEY,
+                score REAL DEFAULT 75.0,
+                lifetime_videos INTEGER DEFAULT 0,
+                avg_quality_score REAL DEFAULT 75.0,
+                avg_retention REAL DEFAULT 70.0,
+                updated_at TEXT NOT NULL
+            );
+            """
+        )
+
         # Content Brain: Analytics History
         cur.execute(
             """
@@ -802,6 +830,110 @@ def update_job(job_id: str, status: JobStatus, error_message: Optional[str] = No
         )
 
 
+def get_jobs_by_status(status: JobStatus, limit: int = 10) -> List[Dict[str, Any]]:
+    with get_db_cursor() as cur:
+        cur.execute("SELECT * FROM jobs WHERE status = ? ORDER BY created_at ASC LIMIT ?", (status.value, limit))
+        return [dict(row) for row in cur.fetchall()]
+
+
+# ==========================================
+# Aesthetic Scores Operations
+# ==========================================
+
+def get_aesthetic_scores() -> List[Dict[str, Any]]:
+    """Retrieve all aesthetic scores descending."""
+    with get_db_cursor() as cur:
+        cur.execute("SELECT * FROM aesthetic_scores ORDER BY score DESC")
+        return [dict(row) for row in cur.fetchall()]
+
+
+def update_aesthetic_score(
+    style_name: str,
+    delta: float,
+    new_quality_score: float,
+    new_retention: float,
+) -> None:
+    now = datetime.utcnow().isoformat()
+    with get_db_cursor() as cur:
+        cur.execute("SELECT * FROM aesthetic_scores WHERE style_name = ?", (style_name,))
+        row = cur.fetchone()
+        if not row:
+            cur.execute(
+                """
+                INSERT INTO aesthetic_scores (style_name, score, lifetime_videos, avg_quality_score, avg_retention, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (style_name, max(0.0, min(100.0, 75.0 + delta)), 1, new_quality_score, new_retention, now),
+            )
+        else:
+            current_score = row["score"]
+            current_count = row["lifetime_videos"]
+            current_q = row["avg_quality_score"]
+            current_ret = row["avg_retention"]
+
+            new_score = max(0.0, min(100.0, current_score + delta))
+            new_count = current_count + 1
+            avg_q = ((current_q * current_count) + new_quality_score) / new_count
+            avg_r = ((current_ret * current_count) + new_retention) / new_count
+
+            cur.execute(
+                """
+                UPDATE aesthetic_scores
+                SET score = ?, lifetime_videos = ?, avg_quality_score = ?, avg_retention = ?, updated_at = ?
+                WHERE style_name = ?
+                """,
+                (new_score, new_count, avg_q, avg_r, now, style_name),
+            )
+# ==========================================
+# Format Scores Operations
+# ==========================================
+
+def get_format_scores() -> List[Dict[str, Any]]:
+    """Retrieve all script format scores descending."""
+    with get_db_cursor() as cur:
+        cur.execute("SELECT * FROM format_scores ORDER BY score DESC")
+        return [dict(row) for row in cur.fetchall()]
+
+
+def update_format_score(
+    format_name: str,
+    delta: float,
+    new_quality_score: float,
+    new_retention: float,
+) -> None:
+    now = datetime.utcnow().isoformat()
+    with get_db_cursor() as cur:
+        cur.execute("SELECT * FROM format_scores WHERE format_name = ?", (format_name,))
+        row = cur.fetchone()
+        if not row:
+            cur.execute(
+                """
+                INSERT INTO format_scores (format_name, score, lifetime_videos, avg_quality_score, avg_retention, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (format_name, max(0.0, min(100.0, 75.0 + delta)), 1, new_quality_score, new_retention, now),
+            )
+        else:
+            current_score = row["score"]
+            current_count = row["lifetime_videos"]
+            current_q = row["avg_quality_score"]
+            current_ret = row["avg_retention"]
+
+            new_score = max(0.0, min(100.0, current_score + delta))
+            new_count = current_count + 1
+            avg_q = ((current_q * current_count) + new_quality_score) / new_count
+            avg_r = ((current_ret * current_count) + new_retention) / new_count
+
+            cur.execute(
+                """
+                UPDATE format_scores
+                SET score = ?, lifetime_videos = ?, avg_quality_score = ?, avg_retention = ?, updated_at = ?
+                WHERE format_name = ?
+                """,
+                (new_score, new_count, avg_q, avg_r, now, format_name),
+            )
+
+
 def list_jobs(limit: int = 30) -> List[Dict[str, Any]]:
     with get_db_cursor() as cur:
         cur.execute("SELECT * FROM jobs ORDER BY created_at DESC LIMIT ?", (limit,))
@@ -994,6 +1126,11 @@ def get_pending_comment_ideas(limit: int = 20) -> List[Dict[str, Any]]:
     with get_db_cursor() as cur:
         cur.execute("SELECT * FROM comment_ideas WHERE status = 'PENDING' ORDER BY created_at DESC LIMIT ?", (limit,))
         return [dict(row) for row in cur.fetchall()]
+
+
+def mark_comment_idea_used(idea_id: int):
+    with get_db_cursor() as cur:
+        cur.execute("UPDATE comment_ideas SET status = 'USED' WHERE id = ?", (idea_id,))
 
 
 def record_analytics(

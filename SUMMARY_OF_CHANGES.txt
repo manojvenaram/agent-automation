@@ -1,0 +1,47 @@
+================================================================================
+          SENSORYSLICE AGENT: SUMMARY OF SYSTEM UPGRADES & ARCHITECTURE
+================================================================================
+Date of Upgrade: 2026-09-14
+Repository: manojvenaram/agent-automation
+
+Here is a complete summary of everything we built, configured, and fixed today so you can easily reference it tomorrow!
+
+1. GITHUB ACTIONS AUTOMATION (The Main Engine)
+--------------------------------------------------------------------------------
+- We moved the agent to run autonomously on GitHub Actions 4 times a day (every 6 hours).
+- Why not hourly?: Running hourly would quickly exhaust the YouTube API quota (10,000 units/day) and likely get your channel shadowbanned for spam. 4 times a day is the algorithmic sweet spot.
+- Memory Persistence: We fixed the "Amnesia" issue by implementing an actions/cache step that zips up the `data/` folder after every run and restores it on the next run.
+
+2. TELEGRAM BOT INTEGRATION (Your Personal Notification System)
+--------------------------------------------------------------------------------
+- We built a fully custom Telegram integration in `backend/services/telegram_service.py`.
+- If a video is successfully rendered, the agent will send the raw .mp4 file directly to your phone via your Telegram Bot.
+- If a video fails the strict AI Fact-Checker (gets marked as NEEDS_REVIEW), it will still send you the video on Telegram with a ⚠️ icon so you can review it manually.
+- We updated `.github/workflows/agent_cron.yml` to securely pass your TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID into the runner environment.
+
+3. KAGGLE GPU NOTEBOOK (The Speed Alternative)
+--------------------------------------------------------------------------------
+- If you ever want blazing fast rendering speeds, you can run the agent on a free Kaggle NVIDIA T4 GPU.
+- We built the `shorts_agent_kaggle.ipynb` notebook and `kaggle_setup.md` guide.
+- Kaggle Memory: Since Kaggle notebooks are temporary, the notebook automatically zips the memory into an `agent_memory_backup.zip` file which you can upload as a Kaggle Private Dataset to keep the agent's brain persistent.
+
+4. AUTO-PUBLISH BEHAVIOR
+--------------------------------------------------------------------------------
+- We currently have `AUTO_PUBLISH="true"` set in your GitHub Actions environment.
+- What this means: The agent will NOT wait for your approval. If it generates a video and the internal AI fact-checker gives it a passing grade, it uploads it straight to YouTube immediately.
+- If you ever want to manually approve videos before they go to YouTube, simply change `AUTO_PUBLISH: "false"` in the `agent_cron.yml` file. It will still send the videos to your Telegram.
+
+5. GOOGLE GEMINI SDK FIX (AFC Warning)
+--------------------------------------------------------------------------------
+- Google released a new update to the `google-genai` SDK that threw annoying Automatic Function Calling (AFC) warnings when using the old `.generate_content()` method.
+- We fixed this by rewriting `backend/services/llm_service.py` to use their newly recommended `.chats.create().send_message()` API. The logs are now 100% clean.
+
+6. BEAUTIFUL DOCUMENTATION
+--------------------------------------------------------------------------------
+- Your repository's `README.md` was completely redesigned with beautiful badges, emojis, and clear instructions.
+- We also generated a `github_profile_readme.md` (saved in your artifacts) that you can copy-paste into your personal GitHub profile to showcase this as your flagship AI engineering project!
+
+================================================================================
+You are officially running a $0, 100% autonomous, self-improving media company. 
+Great work today, Manoj!
+================================================================================

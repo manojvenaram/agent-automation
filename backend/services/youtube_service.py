@@ -16,7 +16,10 @@ from google.auth.transport.requests import Request
 from backend.core.config import settings, CREDENTIALS_DIR
 from backend.core.logging import logger
 
-YOUTUBE_UPLOAD_SCOPE = ["https://www.googleapis.com/auth/youtube.upload"]
+YOUTUBE_SCOPES = [
+    "https://www.googleapis.com/auth/youtube.upload",
+    "https://www.googleapis.com/auth/youtube.readonly"
+]
 
 
 class YouTubeService:
@@ -61,7 +64,7 @@ class YouTubeService:
                     f"Google Cloud Console and save it to: {self.secrets_file}"
                 )
             flow = InstalledAppFlow.from_client_secrets_file(
-                str(self.secrets_file), YOUTUBE_UPLOAD_SCOPE
+                str(self.secrets_file), YOUTUBE_SCOPES
             )
             creds = flow.run_local_server(port=0)
             with open(self.token_file, "wb") as token:
@@ -139,6 +142,44 @@ class YouTubeService:
             "privacy_status": status,
             "url": published_url,
         }
+
+    def fetch_latest_comments(self, max_results: int = 50) -> List[Dict[str, str]]:
+        """
+        Fetches the latest comments from the authenticated user's channel.
+        Returns a list of dicts: [{'text': str, 'author': str}]
+        """
+        if not self.is_authenticated():
+            logger.warning("YouTube authentication required to fetch comments.")
+            return []
+
+        try:
+            youtube = self.get_authenticated_service()
+            
+            # Use commentThreads API to get recent comments across all videos
+            request = youtube.commentThreads().list(
+                part="snippet",
+                allThreadsRelatedToChannelId="mine",
+                order="time",
+                maxResults=max_results,
+                textFormat="plainText"
+            )
+            
+            response = request.execute()
+            comments = []
+            
+            for item in response.get("items", []):
+                snippet = item["snippet"]["topLevelComment"]["snippet"]
+                text = snippet.get("textDisplay", "")
+                author = snippet.get("authorDisplayName", "Viewer")
+                if text:
+                    comments.append({"text": text, "author": author})
+                    
+            logger.info(f"Fetched {len(comments)} recent comments from YouTube.")
+            return comments
+            
+        except Exception as e:
+            logger.error(f"Failed to fetch YouTube comments: {e}")
+            return []
 
 
 # Global singleton instance

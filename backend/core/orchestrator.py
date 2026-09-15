@@ -21,7 +21,7 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
-from backend.core.config import settings, PROJECTS_DIR
+from backend.core.config import settings, PROJECTS_DIR, DATA_DIR
 from backend.core.database import (
     create_project,
     get_project,
@@ -61,6 +61,8 @@ from backend.agents import (
     publisher_agent,
     script_writer_agent
 )
+from backend.services.youtube_service import youtube_service
+from backend.learning.comment_engine import comment_engine
 from backend.core.job_queue import job_queue
 
 
@@ -112,6 +114,26 @@ class AgentOrchestrator:
             if is_autonomous:
                 update_project_state(pid, ProjectState.IDEA)
                 proj_logger.info("Executing Autonomous Internet Intelligence Gathering...")
+                
+                # 0. Engagement Loop: Process Viewer Comments (Only once per day)
+                last_fetch_file = DATA_DIR / "last_comment_fetch.txt"
+                today_str = datetime.utcnow().strftime("%Y-%m-%d")
+                
+                has_run_today = False
+                if last_fetch_file.exists():
+                    has_run_today = last_fetch_file.read_text().strip() == today_str
+                
+                if not has_run_today and getattr(settings, "youtube_comments_enabled", True):
+                    try:
+                        proj_logger.info("First run of the day: Fetching new viewer comments to memory...")
+                        recent_comments = youtube_service.fetch_latest_comments(max_results=30)
+                        if recent_comments:
+                            comment_engine.process_incoming_comments(recent_comments)
+                        last_fetch_file.write_text(today_str)
+                    except Exception as e:
+                        proj_logger.warning(f"Failed to process YouTube comments for Engagement Loop: {e}")
+                        # Write the file anyway so it doesn't keep failing 4 times a day
+                        last_fetch_file.write_text(today_str)
 
                 # 1a. Content Portfolio Allocation (80% Proven / 20% Experiments)
                 target_category, is_experiment = content_portfolio.select_next_portfolio_target(forced_category=category)
@@ -325,6 +347,10 @@ class AgentOrchestrator:
             visuals_dir.mkdir(parents=True, exist_ok=True)
             assets: List[VisualAsset] = []
 
+            # Determine best visual aesthetic style
+            aesthetic_style = content_brain.select_aesthetic_style(chosen_category)
+            proj_logger.info(f"Selected Visual Aesthetic: '{aesthetic_style}'")
+
             # Check if Cartoon Engine should render original character artwork
             is_cartoon_treatment = (
                 direction.visual_treatment == VisualTreatment.CARTOON
@@ -383,6 +409,7 @@ class AgentOrchestrator:
                         topic=chosen_topic,
                         script=script,
                         project_dir=project_dir,
+                        aesthetic_style=aesthetic_style,
                     )
                 finally:
                     job_queue.complete_job(task_id)
@@ -505,6 +532,8 @@ class AgentOrchestrator:
                 views=1,  # initial seed view
                 retention_pct=round(sim_result.composite_retention, 1),
                 top_geography="United States",
+                aesthetic_style=aesthetic_style,
+                script_format=direction.format.value,
             )
 
             # Increment character usage if used
@@ -528,11 +557,16 @@ class AgentOrchestrator:
                     quality_score=qc_report.quality_score,
                     duration_sec=audio_duration,
                 )
+                
+                # Auto-blacklist the topic so it's never chosen again
+                content_brain.add_override_blacklist("topic", chosen_topic, "Auto-blacklisted after successful generation to prevent duplicates")
+                
                 proj_logger.info(f"Short successfully produced & passed Quality Control! (Score: {qc_report.quality_score}/100)")
 
                 if publish_mode:
                     proj_logger.info("Auto-publish enabled, publishing to YouTube...")
-                    publisher_agent.publish_short(project, metadata)
+                    current_project = get_project(pid) or project
+                    publisher_agent.publish_short(current_project, metadata)
                 else:
                     proj_logger.info("Auto-publish disabled. Video awaiting approval in Studio dashboard.")
                     update_project_state(pid, ProjectState.APPROVED)

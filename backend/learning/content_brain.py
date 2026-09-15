@@ -13,6 +13,10 @@ from typing import Any, Dict, List, Optional, Tuple
 from backend.core.database import (
     get_category_scores,
     update_category_score,
+    get_aesthetic_scores,
+    update_aesthetic_score,
+    get_format_scores,
+    update_format_score,
     get_characters,
     save_character,
     increment_character_appearance,
@@ -63,6 +67,60 @@ class ContentBrain:
         scores = get_category_scores()
         return self.portfolio_allocator.calculate_mix(scores)
 
+    def select_aesthetic_style(self, category: str) -> str:
+        """
+        Uses Explore vs Exploit to pick a visual aesthetic style.
+        80% chance to pick the top-performing style, 20% to try a new one.
+        """
+        import random
+        
+        default_styles = [
+            "high quality cinematic vertical portrait, intricate details, highly aesthetic, mysterious",
+            "anime style, studio ghibli, vibrant colors, detailed scenery, magical",
+            "cyberpunk neon lighting, dark moody atmosphere, hyper-realistic",
+            "vintage 90s camcorder footage, grainy, nostalgic, liminal space",
+            "watercolor painting, soft edges, ethereal, beautiful light",
+            "hyper-realistic octane render, 3D, dramatic lighting, 8k resolution"
+        ]
+
+        scores = get_aesthetic_scores()
+        
+        # Epsilon-greedy: 20% exploration, 80% exploitation
+        epsilon = 0.2
+        if random.random() < epsilon or not scores:
+            # Explore: pick randomly from defaults
+            logger.info(f"Content Brain: Exploring random visual style for '{category}'...")
+            return random.choice(default_styles)
+        else:
+            # Exploit: pick the best performing style
+            best_style = scores[0]["style_name"]
+            logger.info(f"Content Brain: Exploiting best visual style: '{best_style}' (Score: {scores[0]['score']:.1f})")
+            return best_style
+
+    def select_script_format(self, category: str) -> str:
+        """
+        Uses Explore vs Exploit to pick a storytelling script format.
+        80% chance to pick the top-performing format, 20% to try a new one.
+        """
+        import random
+        from backend.creative.creative_director import ShortsFormat
+        
+        default_formats = [f.name for f in ShortsFormat]
+
+        scores = get_format_scores()
+        
+        epsilon = 0.2
+        if random.random() < epsilon or not scores:
+            # Explore
+            chosen = random.choice(default_formats)
+            logger.info(f"Content Brain: Exploring random script format for '{category}': {chosen}")
+            return chosen
+        else:
+            # Exploit
+            best_format = scores[0]["format_name"]
+            logger.info(f"Content Brain: Exploiting best script format: '{best_format}' (Score: {scores[0]['score']:.1f})")
+            return best_format
+
     def record_video_performance(
         self,
         project_id: str,
@@ -74,6 +132,8 @@ class ContentBrain:
         comments: int = 0,
         shares: int = 0,
         top_geography: str = "United States",
+        aesthetic_style: Optional[str] = None,
+        script_format: Optional[str] = None,
     ) -> None:
         """Records telemetry and updates category scores."""
         # 1. Store in analytics table
@@ -97,7 +157,27 @@ class ContentBrain:
         )
         logger.info(f"Content Brain: Updated performance for category '{category}' (Retention: {retention_pct}%, Quality: {quality_score})")
 
-        # 3. Semantic Memory Lesson Generation
+        # 3. Update aesthetic score if provided
+        if aesthetic_style:
+            update_aesthetic_score(
+                style_name=aesthetic_style,
+                delta=delta,
+                new_quality_score=float(quality_score),
+                new_retention=retention_pct,
+            )
+            logger.info(f"Content Brain: Updated performance for aesthetic style (Score delta: {delta})")
+
+        # 4. Update script format score if provided
+        if script_format:
+            update_format_score(
+                format_name=script_format,
+                delta=delta,
+                new_quality_score=float(quality_score),
+                new_retention=retention_pct,
+            )
+            logger.info(f"Content Brain: Updated performance for script format (Score delta: {delta})")
+
+        # 5. Semantic Memory Lesson Generation
         if retention_pct >= 75.0 or quality_score >= 90:
             memory_manager.store_memory(
                 memory_type="SUCCESS",

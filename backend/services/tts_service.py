@@ -1,8 +1,9 @@
 """
 Text-To-Speech (TTS) Service for YouTube Shorts Narration.
 Zero paid APIs.
-Primary Engine: edge-tts (free neural voices e.g., en-US-ChristopherNeural).
-Fallback Engine: pyttsx3 (offline Windows SAPI5 engine).
+Primary Engine: VoiceStudio (Local OpenAI-compatible API).
+Fallback Engine 1: edge-tts (free neural voices e.g., en-US-ChristopherNeural).
+Fallback Engine 2: pyttsx3 (offline Windows SAPI5 engine).
 Performs volume normalization, silence trimming, and exact duration measurement.
 """
 
@@ -42,6 +43,23 @@ class TTSService:
         await communicate.save(output_path)
         return output_path
 
+    def _synthesize_voicestudio(self, text: str, output_path: str, voice: Optional[str] = None) -> str:
+        """Synthesize text using local VoiceStudio (OpenAI-compatible) API."""
+        import httpx
+        voice_to_use = voice or "alloy" # Default voice name
+        url = "http://localhost:3900/v1/audio/speech"
+        payload = {
+            "model": "tts-1",
+            "input": text,
+            "voice": voice_to_use
+        }
+        with httpx.Client(timeout=300.0) as client:
+            response = client.post(url, json=payload)
+            response.raise_for_status()
+            with open(output_path, "wb") as f:
+                f.write(response.content)
+        return output_path
+
     def _synthesize_pyttsx3(self, text: str, output_path: str) -> str:
         """Synthesize text using local offline Windows SAPI5 engine."""
         import pyttsx3
@@ -73,8 +91,18 @@ class TTSService:
         raw_output = str(out_path.with_name("raw_" + out_path.name))
 
         success = False
-        # Try primary engine
-        if self.default_engine == "edge-tts":
+        
+        # Try VoiceStudio first
+        try:
+            self._synthesize_voicestudio(text, raw_output, voice)
+            if os.path.exists(raw_output) and os.path.getsize(raw_output) > 100:
+                success = True
+                logger.info("VoiceStudio synthesis succeeded.")
+        except Exception as e:
+            logger.warning(f"VoiceStudio failed or is not running locally on port 3900 ({e}), attempting edge-tts...")
+            
+        # Try primary fallback edge-tts
+        if not success:
             try:
                 # Run async edge-tts in event loop
                 asyncio.run(self._synthesize_edge_tts(text, raw_output, voice))
@@ -84,6 +112,7 @@ class TTSService:
             except Exception as e:
                 logger.warning(f"Edge-TTS failed ({e}), attempting pyttsx3 offline fallback...")
 
+        # Try offline pyttsx3 fallback
         if not success:
             try:
                 self._synthesize_pyttsx3(text, raw_output)

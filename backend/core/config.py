@@ -33,15 +33,17 @@ class AppConfig(BaseModel):
     # Environment & Operating Modes
     environment: str = Field(default="development")
     demo_mode: bool = Field(default=False)
-    auto_publish: bool = Field(default=False)
+    auto_publish: bool = Field(default=True)
     content_mode: str = Field(default="AUTONOMOUS")  # "AUTONOMOUS" or "MANUAL"
     host: str = Field(default="127.0.0.1")
     port: int = Field(default=8000)
     debug: bool = Field(default=False)
 
-    # Local AI / LLM (Ollama / Gemini)
-    llm_provider: str = Field(default="gemini")
+    # Local AI / LLM (Ollama / Gemini / Groq)
+    llm_provider: str = Field(default="groq")
     gemini_api_key: str = Field(default="")
+    groq_api_key: str = Field(default="")
+    groq_model: str = Field(default="llama-3.1-8b-instant")
     ollama_base_url: str = Field(default="http://localhost:11434")
     ollama_model: str = Field(default="qwen2.5:3b")
     llm_timeout: int = Field(default=60)
@@ -97,14 +99,13 @@ class AppConfig(BaseModel):
     # Content Portfolio Target Mix (Default Weights, adjusted dynamically by Content Brain)
     portfolio_mix: Dict[str, float] = Field(
         default_factory=lambda: {
-            "trending": 0.25,
-            "evergreen": 0.20,
-            "humor": 0.15,
-            "science": 0.10,
-            "sports": 0.10,
-            "cartoons": 0.10,
-            "history": 0.05,
-            "experiments": 0.05,
+            "reddit_stories": 0.25,
+            "quizzes": 0.20,
+            "shower_thoughts": 0.20,
+            "motivational": 0.15,
+            "did_you_know": 0.10,
+            "science": 0.05,
+            "trending": 0.05,
         }
     )
 
@@ -124,6 +125,7 @@ class AppConfig(BaseModel):
     youtube_token_file: Path = Field(default=CREDENTIALS_DIR / "token.pickle")
     youtube_privacy_status: str = Field(default="private")
     youtube_category_id: str = Field(default="28")  # 28 = Science & Technology
+    youtube_comments_enabled: bool = Field(default=False)
 
     # Telegram Bot Integration
     telegram_bot_token: str = Field(default="")
@@ -153,7 +155,7 @@ class AppConfig(BaseModel):
 
     # Hardware & Cache Optimizations
     cache_max_gb: float = Field(default=10.0)
-    render_mode: str = Field(default="standard") # 'standard' or 'low_resource'
+    render_mode: str = Field(default="low_resource") # 'standard' or 'low_resource'
     max_concurrent_ai_tasks: int = Field(default=1)
     hardware_profile_path: Path = Field(default=DATA_DIR / "hardware_profile.json")
 
@@ -172,6 +174,8 @@ def load_config() -> AppConfig:
         "DEBUG": lambda v: ("debug", v.lower() == "true"),
         "LLM_PROVIDER": "llm_provider",
         "GEMINI_API_KEY": "gemini_api_key",
+        "GROQ_API_KEY": "groq_api_key",
+        "GROQ_MODEL": "groq_model",
         "OLLAMA_BASE_URL": "ollama_base_url",
         "OLLAMA_MODEL": "ollama_model",
         "LLM_TIMEOUT": lambda v: ("llm_timeout", int(v)),

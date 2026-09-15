@@ -19,6 +19,7 @@ class VisualResearchAgent:
         topic: str,
         script: ScriptModel,
         project_dir: Path,
+        aesthetic_style: str = "high quality cinematic vertical portrait",
     ) -> List[VisualAsset]:
         """Collect or generate high quality 9:16 visual assets for each scene."""
         logger.info(f"Collecting visual assets for project '{project_id}' ({len(script.scenes)} scenes)...")
@@ -36,6 +37,7 @@ class VisualResearchAgent:
             topic=topic,
             scenes_info=scenes_data,
             project_dir=project_dir,
+            aesthetic_style=aesthetic_style,
         )
 
         save_assets(project_id, assets)

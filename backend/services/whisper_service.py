@@ -122,8 +122,27 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             for start, end, text in events:
                 start_str = self._format_ass_time(start)
                 end_str = self._format_ass_time(end)
+                
+                # Alex Hormozi Style Karaoke formatting
                 clean_text = text.replace("{", "").replace("}", "").upper()
-                f.write(f"Dialogue: 0,{start_str},{end_str},ShortsDefault,,0,0,0,,{clean_text}\n")
+                words = clean_text.split()
+                
+                if not words:
+                    continue
+                
+                total_duration_sec = end - start
+                total_chars = sum(len(w) for w in words)
+                
+                karaoke_line = ""
+                for w in words:
+                    # Allocate time based on word length relative to total chars
+                    word_duration_sec = (len(w) / total_chars) * total_duration_sec
+                    # ASS karaoke tag {\kXX} is in centiseconds (1/100 of a second)
+                    centiseconds = int(round(word_duration_sec * 100))
+                    karaoke_line += f"{{\\k{centiseconds}}}{w} "
+                
+                karaoke_line = karaoke_line.strip()
+                f.write(f"Dialogue: 0,{start_str},{end_str},ShortsDefault,,0,0,0,,{karaoke_line}\n")
 
 
 # Global singleton instance

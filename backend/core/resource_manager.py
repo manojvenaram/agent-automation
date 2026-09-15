@@ -92,12 +92,15 @@ class ResourceManager:
         return False
 
     def can_allocate(self, estimated_ram_mb: float) -> bool:
-        if self.is_emergency_mode():
+        # If in emergency mode (90%+ RAM used), only allow tiny tasks
+        if self.is_emergency_mode() and estimated_ram_mb > 200:
             return False
             
         available_mb = psutil.virtual_memory().available / (1024 * 1024)
-        if available_mb - estimated_ram_mb < 500:
+        # Ensure we don't completely crash the system, but be lenient
+        if available_mb < 250:
             return False
+            
         return True
 
 resource_manager = ResourceManager()

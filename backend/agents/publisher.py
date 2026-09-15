@@ -12,6 +12,7 @@ from backend.core.database import update_project_state
 from backend.core.logging import logger
 from backend.models import ProjectModel, ProjectState, YouTubeMetadata
 from backend.services.youtube_service import youtube_service
+from backend.services.telegram_service import telegram_service
 
 
 class PublisherAgent:
@@ -28,6 +29,14 @@ class PublisherAgent:
 
         if not project.video_path:
             raise ValueError(f"Project '{project.id}' has no rendered video file to publish.")
+
+        # Always attempt Telegram notification first
+        try:
+            logger.info("Sending video to Telegram...")
+            caption = f"🚀 New Video Generated!\n\nTitle: {metadata.selected_title}"
+            telegram_service.send_video(project.video_path, caption=caption)
+        except Exception as e:
+            logger.error(f"Failed to send to Telegram: {e}")
 
         # 1. DEMO_MODE: simulate successful publish for safe local verification
         if settings.demo_mode:

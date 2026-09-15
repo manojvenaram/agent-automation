@@ -9,7 +9,9 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional
 from backend.core.logging import logger
+from backend.core.config import settings
 from backend.services.llm_service import LLMService
+from backend.learning.content_brain import content_brain
 
 
 class ShortsFormat(str, Enum):
@@ -33,6 +35,10 @@ class ShortsFormat(str, Enum):
     DRAMATIC_STORY = "DRAMATIC_STORY"
     FAST_EXPLAINER = "FAST_EXPLAINER"
     VISUAL_EXPERIMENT = "VISUAL_EXPERIMENT"
+    REDDIT_STORY = "REDDIT_STORY"
+    WOULD_YOU_RATHER = "WOULD_YOU_RATHER"
+    SHOWER_THOUGHTS = "SHOWER_THOUGHTS"
+    MOTIVATIONAL_QUOTE = "MOTIVATIONAL_QUOTE"
 
 
 class VisualTreatment(str, Enum):
@@ -48,6 +54,9 @@ class VisualTreatment(str, Enum):
     SCREEN_RECORDINGS = "SCREEN_RECORDINGS"
     TEXT_ANIMATION = "TEXT_ANIMATION"
     CARTOON = "CARTOON"
+    PANNING_BACKGROUND = "PANNING_BACKGROUND"
+    MINIMAL_TEXT_ONLY = "MINIMAL_TEXT_ONLY"
+    SPLIT_SCREEN_STATIC = "SPLIT_SCREEN_STATIC"
 
 
 @dataclass
@@ -135,7 +144,7 @@ class CreativeDirectorAgent:
 
     def select_format(self, topic: str, category: str, humor_suitability: int, is_fiction_or_cartoon: bool = False) -> ShortsFormat:
         """
-        Intelligently choose from the 20 Shorts formats based on topic, category, and tone.
+        Intelligently choose from the 20 Shorts formats based on topic, category, tone, and learned performance.
         """
         lower = topic.lower()
         cat = category.lower()
@@ -143,51 +152,38 @@ class CreativeDirectorAgent:
         if is_fiction_or_cartoon or cat == "cartoon":
             return ShortsFormat.MINI_CARTOON
 
-        if cat == "humor" or humor_suitability >= 80:
-            if "what if" in lower:
-                return ShortsFormat.WHAT_IF
-            return ShortsFormat.COMEDY
+        # In low resource mode, heavily bias toward simple formats
+        if settings.render_mode == "low_resource":
+            low_resource_formats = [
+                ShortsFormat.REDDIT_STORY,
+                ShortsFormat.WOULD_YOU_RATHER,
+                ShortsFormat.SHOWER_THOUGHTS,
+                ShortsFormat.MOTIVATIONAL_QUOTE,
+                ShortsFormat.DID_YOU_KNOW
+            ]
+            import random
+            return random.choice(low_resource_formats)
 
-        if cat == "mystery" or "mystery" in lower or "unsolved" in lower:
-            return ShortsFormat.MYSTERY
-
-        if cat == "news":
-            return ShortsFormat.NEWS_EXPLAINER
-
-        if "top" in lower or "ranking" in lower or "best" in lower:
-            if "3" in lower:
-                return ShortsFormat.TOP_3
-            if "5" in lower:
-                return ShortsFormat.TOP_5
-            return ShortsFormat.COUNTDOWN
-
-        if " vs " in lower or " versus " in lower:
-            return ShortsFormat.VERSUS
-
-        if "what if" in lower:
-            return ShortsFormat.WHAT_IF
-
-        if "myth" in lower or "true or false" in lower or "actually" in lower:
-            return ShortsFormat.MYTH_VS_FACT
-
-        if "history" in cat or "timeline" in lower or "evolution" in lower or "origin" in lower:
-            return ShortsFormat.TIMELINE
-
-        if "experiment" in lower or "how it works" in lower:
-            return ShortsFormat.VISUAL_EXPERIMENT
-
-        if cat in ["science", "space", "animals"]:
-            return ShortsFormat.DID_YOU_KNOW
-
-        if cat in ["sports", "gaming"]:
-            return ShortsFormat.FAST_EXPLAINER
-
-        return ShortsFormat.DOCUMENTARY
+        # Ask Content Brain for the optimal format via Explore/Exploit
+        best_format_str = content_brain.select_script_format(category)
+        
+        try:
+            return ShortsFormat[best_format_str]
+        except KeyError:
+            return ShortsFormat.DOCUMENTARY
 
     def select_visual_treatment(self, category: str, fmt: ShortsFormat) -> VisualTreatment:
         """
         Determines the optimal visual treatment style.
         """
+        if settings.render_mode == "low_resource":
+            if fmt == ShortsFormat.REDDIT_STORY:
+                return VisualTreatment.PANNING_BACKGROUND
+            if fmt == ShortsFormat.WOULD_YOU_RATHER:
+                return VisualTreatment.SPLIT_SCREEN_STATIC
+            if fmt in [ShortsFormat.SHOWER_THOUGHTS, ShortsFormat.MOTIVATIONAL_QUOTE, ShortsFormat.DID_YOU_KNOW]:
+                return VisualTreatment.MINIMAL_TEXT_ONLY
+
         cat = category.lower()
         if fmt == ShortsFormat.MINI_CARTOON or cat == "cartoon":
             return VisualTreatment.CARTOON

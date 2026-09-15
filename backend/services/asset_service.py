@@ -57,6 +57,7 @@ class AssetService:
         topic: str,
         scenes_info: List[dict],
         project_dir: Path,
+        aesthetic_style: str = "high quality cinematic vertical portrait, intricate details, highly aesthetic, mysterious",
     ) -> List[VisualAsset]:
         """
         Gathers visuals for each scene:
@@ -73,85 +74,45 @@ class AssetService:
             scene_desc = scene.get("visual_description") or topic
             narration_text = scene.get("narration", "")
 
-            # Attempt fetching from Wikimedia Commons
-            downloaded = False
-            try:
-                # Query keyword
-                keyword = topic.split()[0] if len(topic.split()) > 1 else topic
-                results = research_service.search_commons_media(f"{topic} {scene_desc}", limit=3)
-                if not results:
-                    results = research_service.search_commons_media(topic, limit=3)
-
-                if results:
-                    img_data = results[idx % len(results)]
-                    img_url = img_data["url"]
-                    with httpx.Client(timeout=15.0) as client:
-                        resp = client.get(img_url)
-                        if resp.status_code == 200 and len(resp.content) > 1000:
-                            with open(target_file, "wb") as f:
-                                f.write(resp.content)
-                            
-                            # Verify and resize with Pillow to 1080x1920
-                            with Image.open(target_file) as im:
-                                im.convert("RGB")
-                                self._resize_and_cover(im, target_file, 1080, 1920)
-
-                            assets.append(
-                                VisualAsset(
-                                    asset_id=asset_id,
-                                    file_path=str(target_file),
-                                    source_url=img_url,
-                                    source_name=img_data.get("title", "Wikimedia Commons"),
-                                    license=img_data.get("license", "Creative Commons"),
-                                    creator=img_data.get("creator", "Unknown"),
-                                    attribution_required=True,
-                                    is_procedural=False,
-                                )
-                            )
-                            downloaded = True
-            except Exception as e:
-                logger.debug(f"Media fetch failed for scene {idx+1}: {e}")
-
-            # Fallback to procedural generation
-            if not downloaded:
-                prompt_to_use = f"{topic}, {scene_desc}, high quality cinematic vertical portrait, intricate details"
-                ai_success = self._generate_ai_visual(
-                    output_path=target_file,
-                    prompt=prompt_to_use,
+            # Primary visual generation via Pollinations.ai
+            prompt_to_use = f"{topic}, {scene_desc}, {aesthetic_style}"
+            ai_success = self._generate_ai_visual(
+                output_path=target_file,
+                prompt=prompt_to_use,
+            )
+            
+            if ai_success:
+                assets.append(
+                    VisualAsset(
+                        asset_id=asset_id,
+                        file_path=str(target_file),
+                        source_url="https://pollinations.ai/",
+                        source_name="Pollinations AI Image Generator",
+                        license="Public Domain / CC0",
+                        creator="ShortsAgent via Pollinations",
+                        attribution_required=False,
+                        is_procedural=False,
+                    )
                 )
-                
-                if ai_success:
-                    assets.append(
-                        VisualAsset(
-                            asset_id=asset_id,
-                            file_path=str(target_file),
-                            source_url="https://pollinations.ai/",
-                            source_name="Pollinations AI Image Generator",
-                            license="Public Domain / CC0",
-                            creator="ShortsAgent via Pollinations",
-                            attribution_required=False,
-                            is_procedural=False,
-                        )
+            else:
+                self._generate_procedural_visual(
+                    output_path=target_file,
+                    topic=topic,
+                    scene_index=idx + 1,
+                    text_snippet=narration_text or scene_desc,
+                )
+                assets.append(
+                    VisualAsset(
+                        asset_id=asset_id,
+                        file_path=str(target_file),
+                        source_url="local://procedural_generator",
+                        source_name="Procedural Visual Engine",
+                        license="Public Domain / CC0",
+                        creator="ShortsAgent",
+                        attribution_required=False,
+                        is_procedural=True,
                     )
-                else:
-                    self._generate_procedural_visual(
-                        output_path=target_file,
-                        topic=topic,
-                        scene_index=idx + 1,
-                        text_snippet=narration_text or scene_desc,
-                    )
-                    assets.append(
-                        VisualAsset(
-                            asset_id=asset_id,
-                            file_path=str(target_file),
-                            source_url="local://procedural_generator",
-                            source_name="Procedural Visual Engine",
-                            license="Public Domain / CC0",
-                            creator="ShortsAgent",
-                            attribution_required=False,
-                            is_procedural=True,
-                        )
-                    )
+                )
 
         # Write SOURCES.md in project directory
         self._write_sources_file(project_dir, assets, topic)

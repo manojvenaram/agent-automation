@@ -21,25 +21,36 @@ class MetadataAgent:
         sources: List[ResearchSource],
         project_dir: Path,
     ) -> YouTubeMetadata:
-        """Generate YouTube Shorts metadata package."""
+        """Generate YouTube Shorts metadata package with real-time SEO competitor analysis."""
         logger.info(f"Generating YouTube metadata for '{topic}'...")
         metadata_dir = project_dir / "metadata"
         metadata_dir.mkdir(parents=True, exist_ok=True)
 
         sources_summary = ", ".join([s.title for s in sources[:3]])
 
+        # 1. Competitor Analysis via DDGS
+        competitor_titles = []
+        try:
+            from duckduckgo_search import DDGS
+            logger.info("Scraping top ranking YouTube Shorts competitors for SEO analysis...")
+            results = DDGS().text(f"site:youtube.com {topic} #shorts", max_results=5)
+            competitor_titles = [r.get("title", "") for r in results if r.get("title")]
+        except Exception as e:
+            logger.warning(f"Competitor analysis failed: {e}")
+
         prompt = (
             f"Topic: {topic}\n"
             f"Script:\n{script.full_narration}\n"
             f"Sources: {sources_summary}\n\n"
-            f"Task: Generate YouTube Shorts metadata.\n"
+            f"Current Top Ranking Competitor Titles on YouTube:\n{json.dumps(competitor_titles)}\n\n"
+            f"Task: Generate a highly viral YouTube Shorts SEO metadata package.\n"
             f"Requirements:\n"
-            f"1. Generate 5 curiosity-driven titles under 80 characters.\n"
-            f"2. Pick the single strongest title.\n"
-            f"3. Write an engaging 2-3 paragraph description citing sources.\n"
-            f"4. 5-7 focused hashtags (must include #Shorts).\n"
-            f"5. 6-10 search tags.\n"
-            f"6. 1 pinned comment question to drive viewer comments.\n"
+            f"1. Generate 5 curiosity-driven titles under 80 characters. Analyze the competitor titles to create something even more clickable.\n"
+            f"2. Pick the single strongest high-CTR title.\n"
+            f"3. Write an engaging 2-3 paragraph description packed with proven search terms.\n"
+            f"4. Pick 5-7 focused hashtags combining broad tags (like #Shorts, #viral) and highly specific niche tags.\n"
+            f"5. Provide 6-10 SEO search tags to rank in the YouTube algorithm.\n"
+            f"6. Generate a highly controversial or engaging pinned comment question to farm comments and boost engagement.\n"
             f"Output strictly JSON:\n"
             f'{{"titles": ["..."], "selected_title": "...", "description": "...", "hashtags": ["#Shorts", "..."], "tags": ["..."], "pinned_comment": "..."}}'
         )

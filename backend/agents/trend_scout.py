@@ -9,9 +9,10 @@ import json
 import random
 from typing import Dict, List, Optional
 from backend.core.config import settings
-from backend.core.database import get_recent_topics, save_topic
+from backend.core.database import get_recent_topics, save_topic, mark_comment_idea_used
 from backend.core.logging import logger
 from backend.services.llm_service import llm_service
+from backend.learning.comment_engine import comment_engine
 
 
 class TrendScoutAgent:
@@ -25,21 +26,62 @@ class TrendScoutAgent:
     ) -> List[Dict[str, any]]:
         """
         Discover candidate topics for YouTube Shorts.
-        Cross-references previously produced topics from DB memory.
+        Priority 1: Viewer Comments (Engagement Loop).
+        Priority 2: Real-time internet trends.
         """
-        selected_category = category or random.choice(self.categories)
         recent_topics = get_recent_topics(limit=50)
+        
+        # 0. Engagement Loop: Check for pending viewer comments
+        pending_comments = comment_engine.get_pending_topics(limit=1)
+        if pending_comments:
+            comment_idea = pending_comments[0]
+            logger.info(f"Engagement Loop triggered! Using viewer comment as seed: {comment_idea['original_comment']}")
+            
+            # Immediately mark as used so it doesn't get picked up again next time
+            mark_comment_idea_used(comment_idea["id"])
+            
+            # Return this as the primary candidate
+            return [{
+                "topic": comment_idea["derived_topic"],
+                "category": comment_idea["category"],
+                "premise": f"Answering viewer @{comment_idea['author']}: '{comment_idea['original_comment']}'",
+                "hook_idea": f"Viewer @{comment_idea['author']} asked: {comment_idea['original_comment']} Let's find out!"
+            }]
 
-        logger.info(f"Discovering topics for category '{selected_category}' (avoiding {len(recent_topics)} past topics)...")
+        # 1. Fetch Real-time Trends
+        live_trends = []
+        if category:
+            logger.info(f"Fetching DuckDuckGo News trends for category: '{category}'...")
+            try:
+                from duckduckgo_search import DDGS
+                results = DDGS().news(keywords=category, max_results=15)
+                live_trends = [r.get('title', '') for r in results if r.get('title')]
+            except Exception as e:
+                logger.warning(f"DuckDuckGo search failed: {e}")
+        else:
+            logger.info("Fetching Google Trends Daily RSS (US)...")
+            try:
+                import feedparser
+                feed = feedparser.parse("https://trends.google.com/trends/trendingsearches/daily/rss?geo=US")
+                live_trends = [entry.title for entry in feed.entries[:20]]
+            except Exception as e:
+                logger.warning(f"Google Trends RSS failed: {e}")
 
+        if not live_trends:
+            live_trends = ["AI breakthroughs", "Space exploration", "Ancient mysteries", "Psychology facts"]
+
+        logger.info(f"Found live trends: {live_trends[:5]}...")
+
+        # 2. Feed to Gemini Brain
         prompt = (
-            f"Generate {count} unique, mind-bending, curiosity-driven YouTube Shorts topics in the category of '{selected_category}'.\n"
+            f"Here are the current viral internet trends today: {json.dumps(live_trends)}.\n"
+            f"Analyze these trends and generate {count} unique, curiosity-driven YouTube Shorts topics based on the most interesting ones.\n"
             f"Requirements:\n"
-            f"1. Must be scientifically accurate or historically verifiable.\n"
+            f"1. Must be scientifically accurate, historically verifiable, or based on real news.\n"
             f"2. Must have an extreme 'wait, what?!' curiosity factor suitable for a 30-60 second Short.\n"
-            f"3. Do NOT suggest any of these previous topics: {json.dumps(recent_topics[-15:])}\n"
+            f"3. Do NOT suggest any of these previously covered topics: {json.dumps(recent_topics[-15:])}\n"
             f"Output strictly valid JSON in this exact structure:\n"
-            f'{{"topics": [{{"topic": "Topic Title", "category": "{selected_category}", "premise": "Brief explanation of why this is fascinating", "hook_idea": "Opening question or statement"}}]}}'
+            f'{{"topics": [{{"topic": "Topic Title", "category": "Derived Category", "premise": "Brief explanation of why this is fascinating", "hook_idea": "Opening question or statement"}}]}}'
         )
 
         response = llm_service.generate(prompt, json_mode=True)
@@ -52,7 +94,7 @@ class TrendScoutAgent:
                 if t and not any(t.lower() in past.lower() for past in recent_topics):
                     candidates.append({
                         "topic": t,
-                        "category": item.get("category", selected_category),
+                        "category": item.get("category", category or "Trending"),
                         "premise": item.get("premise", ""),
                         "hook_idea": item.get("hook_idea", ""),
                     })

@@ -38,6 +38,9 @@ class JobQueue:
                     retry_count INTEGER DEFAULT 0
                 )
             """)
+            # Cleanup old stale jobs from previous cancelled runs to prevent deadlocks
+            conn.execute("UPDATE jobs SET status = ? WHERE status IN (?, ?)", 
+                         (TaskStatus.FAILED.value, TaskStatus.PENDING.value, TaskStatus.RUNNING.value))
             conn.commit()
 
     def enqueue(self, task_id: str, project_id: str, task_type: str, payload: Dict[str, Any], ram_estimate_mb: float = 100.0, priority: int = 1):

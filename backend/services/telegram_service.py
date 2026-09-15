@@ -6,8 +6,8 @@ from backend.core.logging import logger
 
 class TelegramService:
     def __init__(self):
-        self.bot_token = settings.telegram_bot_token
-        self.chat_id = settings.telegram_chat_id
+        self.bot_token = settings.telegram_bot_token.strip() if settings.telegram_bot_token else ""
+        self.chat_id = settings.telegram_chat_id.strip() if settings.telegram_chat_id else ""
         self.base_url = f"https://api.telegram.org/bot{self.bot_token}"
 
     def is_enabled(self) -> bool:

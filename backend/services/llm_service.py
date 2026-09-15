@@ -8,6 +8,7 @@ and deterministic fallback generation if API is not responding.
 import json
 import re
 from typing import Any, Dict, List, Optional
+import httpx
 from google import genai
 from google.genai import types
 from backend.core.config import settings
@@ -16,11 +17,21 @@ from backend.core.resource_manager import resource_manager
 
 class LLMService:
     def __init__(self):
+        self.provider = settings.llm_provider.lower()
         self.api_key = settings.gemini_api_key
-        self.model_name = "gemini-2.5-flash"
-        self.client = genai.Client(api_key=self.api_key) if self.api_key else None
+        
+        if self.provider == "gemini":
+            self.model_name = "gemini-2.5-flash"
+        elif self.provider == "groq":
+            self.model_name = settings.groq_model
+        else:
+            self.model_name = settings.ollama_model
+            
+        self.client = genai.Client(api_key=self.api_key) if (self.api_key and self.provider == "gemini") else None
 
     def is_available(self) -> bool:
+        if self.provider in ["ollama", "groq"]:
+            return True
         return bool(self.api_key)
 
     def list_installed_models(self) -> List[str]:
@@ -57,6 +68,58 @@ class LLMService:
         temperature: Optional[float] = None,
         timeout: Optional[int] = None,
     ) -> str:
+        if self.provider == "groq":
+            try:
+                url = "https://api.groq.com/openai/v1/chat/completions"
+                headers = {
+                    "Authorization": f"Bearer {settings.groq_api_key}",
+                    "Content-Type": "application/json"
+                }
+                messages = []
+                if system_prompt:
+                    messages.append({"role": "system", "content": system_prompt})
+                messages.append({"role": "user", "content": prompt})
+
+                payload = {
+                    "model": settings.groq_model,
+                    "messages": messages,
+                    "temperature": temperature if temperature is not None else settings.llm_temperature,
+                }
+                if json_mode:
+                    payload["response_format"] = {"type": "json_object"}
+                
+                with httpx.Client(timeout=timeout or settings.llm_timeout) as client:
+                    response = client.post(url, headers=headers, json=payload)
+                    response.raise_for_status()
+                    return response.json()["choices"][0]["message"]["content"]
+            except Exception as e:
+                logger.warning(f"Groq request failed ({e}). Utilizing rule-based fallback generator.")
+                return self._generate_fallback(prompt, json_mode)
+
+        if self.provider == "ollama":
+            try:
+                url = f"{settings.ollama_base_url}/api/generate"
+                payload = {
+                    "model": settings.ollama_model,
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": {
+                        "temperature": temperature if temperature is not None else settings.llm_temperature
+                    }
+                }
+                if system_prompt:
+                    payload["system"] = system_prompt
+                if json_mode:
+                    payload["format"] = "json"
+                
+                with httpx.Client(timeout=timeout or settings.llm_timeout) as client:
+                    response = client.post(url, json=payload)
+                    response.raise_for_status()
+                    return response.json()["response"]
+            except Exception as e:
+                logger.warning(f"Ollama request failed ({e}). Utilizing rule-based fallback generator.")
+                return self._generate_fallback(prompt, json_mode)
+
         if not self.client:
             logger.warning("Gemini API key is missing. Utilizing rule-based fallback generator.")
             return self._generate_fallback(prompt, json_mode)
