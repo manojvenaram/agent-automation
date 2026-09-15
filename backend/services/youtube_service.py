@@ -28,13 +28,12 @@ class YouTubeService:
         self.token_file = settings.youtube_token_file
 
     def is_authenticated(self) -> bool:
-        """Check if valid authenticated YouTube credentials exist."""
+        """Check if valid authenticated YouTube credentials exist and can be refreshed."""
         if not self.token_file.exists():
             return False
+        # get_authenticated_service handles token refresh automatically
         try:
-            with open(self.token_file, "rb") as token:
-                creds = pickle.load(token)
-                return bool(creds and creds.valid)
+            return self.get_authenticated_service() is not None
         except Exception:
             return False
 

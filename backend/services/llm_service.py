@@ -18,7 +18,8 @@ from backend.core.resource_manager import resource_manager
 class LLMService:
     def __init__(self):
         self.provider = settings.llm_provider.lower()
-        self.api_key = settings.gemini_api_key
+        self.api_key = (settings.gemini_api_key or "").strip()
+        self.groq_key = (settings.groq_api_key or "").strip()
         
         if self.provider == "gemini":
             self.model_name = "gemini-2.5-flash"
@@ -72,7 +73,7 @@ class LLMService:
             try:
                 url = "https://api.groq.com/openai/v1/chat/completions"
                 headers = {
-                    "Authorization": f"Bearer {settings.groq_api_key}",
+                    "Authorization": f"Bearer {self.groq_key}",
                     "Content-Type": "application/json"
                 }
                 messages = []
