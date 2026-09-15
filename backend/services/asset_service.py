@@ -150,6 +150,19 @@ class AssetService:
                 if resp.status_code == 200 and len(resp.content) > 10000:  # Valid image is > 10kb
                     with open(output_path, "wb") as f:
                         f.write(resp.content)
+                    
+                    # Physically crop the bottom 60 pixels to ensure absolutely no watermark
+                    try:
+                        from PIL import Image
+                        img = Image.open(output_path)
+                        width, height = img.size
+                        img = img.crop((0, 0, width, height - 60))
+                        # Resize back to maintain exact 1080x1920 aspect ratio for FFmpeg
+                        img = img.resize((width, height), Image.Resampling.LANCZOS)
+                        img.save(output_path, format="JPEG", quality=92)
+                    except Exception as crop_err:
+                        logger.warning(f"Failed to crop watermark: {crop_err}")
+                        
                     return True
         except Exception as e:
             logger.warning(f"Pollinations AI generation failed: {e}")
