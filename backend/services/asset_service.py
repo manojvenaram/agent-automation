@@ -145,7 +145,7 @@ class AssetService:
         encoded_prompt = urllib.parse.quote(prompt)
         url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1080&height=1920&nologo=true"
         try:
-            with httpx.Client(timeout=30.0) as client:
+            with httpx.Client(timeout=60.0) as client:
                 resp = client.get(url)
                 if resp.status_code == 200 and len(resp.content) > 10000:  # Valid image is > 10kb
                     with open(output_path, "wb") as f:
