@@ -58,10 +58,11 @@ graph TD
 
 ## ✨ Core Features
 
-- 💸 **100% Free Stack**: Uses `Gemini-2.5-Flash` (Free Tier), Pexels API (Free), Edge-TTS (Free), and FFmpeg (Open Source). No paid subscriptions required.
-- 🧠 **TurboVec Semantic Memory**: The agent remembers what topics it has already covered. It builds a semantic index of its memory and stores it in SQLite, so it never uploads the same video twice.
+- 💸 **100% Free Stack**: Uses `Groq (Llama-3.1)` (Blazing Fast Free Tier), Pexels API (Free), Edge-TTS (Free), and FFmpeg (Open Source). No paid subscriptions required.
+- 🧠 **TurboVec Semantic Memory & Topic Blacklisting**: The agent builds a semantic index of its memory and automatically blacklists every topic it generates, ensuring it **never** uploads the same video twice.
+- ⚡ **Ultra-Low Resource Formats**: Runs flawlessly on basic 8GB laptops. It automatically pivots between high-end cinematic edits and lightweight formats like Reddit Stories, Shower Thoughts, Quizzes, and Motivational Quotes depending on available memory.
 - 🚨 **Anti-Hallucination Quality Control**: The agent evaluates its own scripts. If it hallucinates or lacks factual confidence, the video is flagged as `NEEDS_REVIEW` and blocked from YouTube to protect your channel's reputation.
-- 📱 **Telegram Bot Integration**: Directly uploads the finished AI video to your Telegram chat. If a video fails the fact-checker, you still get it on your phone so you can manually upload it if you like it!
+- 📱 **Telegram Bot Integration**: Directly uploads the finished AI video to your Telegram chat immediately after rendering. If YouTube authentication isn't set up yet, you'll still get the file seamlessly on your phone!
 
 ---
 
@@ -95,7 +96,8 @@ To get this running for free, you need to grab the following keys and add them t
 
 | Secret Name | Where to get it | Cost |
 | :--- | :--- | :--- |
-| `GEMINI_API_KEY` | [Google AI Studio](https://aistudio.google.com/) | Free |
+| `GROQ_API_KEY` | [Groq Console](https://console.groq.com/) | Free |
+| `GEMINI_API_KEY` | [Google AI Studio](https://aistudio.google.com/) | Free (Optional Fallback) |
 | `PEXELS_API_KEY` | [Pexels Developers](https://www.pexels.com/api/) | Free |
 | `TELEGRAM_BOT_TOKEN`| Message `@BotFather` on Telegram | Free |
 | `TELEGRAM_CHAT_ID` | Message your Bot, then check `api.telegram.org/bot<TOKEN>/getUpdates` | Free |
