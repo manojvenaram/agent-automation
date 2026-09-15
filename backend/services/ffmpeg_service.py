@@ -153,17 +153,27 @@ class FFmpegService:
         w = settings.video_width
         h = settings.video_height
 
-        # Zoom in: zoom from 1.0 to 1.15 smoothly
-        # Zoom out: zoom from 1.15 to 1.0 smoothly
-        if zoom_direction == "out":
-            zoom_expr = f"1.15-0.15*(on/{frames})"
-        else:
+        import random
+        effect = random.choice(["zoom_in", "zoom_out", "pan_left", "pan_right"])
+        if effect == "zoom_in":
             zoom_expr = f"1.0+0.15*(on/{frames})"
+            x_expr, y_expr = "'iw/2-(iw/zoom/2)'", "'ih/2-(ih/zoom/2)'"
+        elif effect == "zoom_out":
+            zoom_expr = f"1.15-0.15*(on/{frames})"
+            x_expr, y_expr = "'iw/2-(iw/zoom/2)'", "'ih/2-(ih/zoom/2)'"
+        elif effect == "pan_left":
+            zoom_expr = "1.15"
+            x_expr = f"'(iw-iw/zoom/2)-(on/{frames})*(iw-iw/zoom)'"
+            y_expr = "'ih/2-(ih/zoom/2)'"
+        else: # pan_right
+            zoom_expr = "1.15"
+            x_expr = f"'(iw/zoom/2)+(on/{frames})*(iw-iw/zoom)'"
+            y_expr = "'ih/2-(ih/zoom/2)'"
 
-        # Filtergraph: scale image to cover 1080x1920, apply zoompan filter
+        # Filtergraph: zoompan directly on the 1080x1920 image
         vf = (
-            f"scale=8000:-1,zoompan=z='{zoom_expr}':d={frames}:"
-            f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={w}x{h}:fps={settings.video_fps},"
+            f"zoompan=z='{zoom_expr}':d={frames}:"
+            f"x={x_expr}:y={y_expr}:s={w}x{h}:fps={settings.video_fps},"
             f"format=yuv420p"
         )
 
@@ -271,16 +281,19 @@ class FFmpegService:
         # Build FFmpeg command inputs
         args = ["-y", "-i", video_input, "-i", voiceover_audio]
 
+        # Add procedural SFX input (Index 2)
+        args.extend(["-f", "lavfi", "-i", "anoisesrc=d=1.5:c=pink,afade=t=out:d=1.5,volume=0.25"])
+
         filter_complex = []
         audio_out_label = "[aout]"
 
         if background_music and os.path.exists(background_music):
-            args.extend(["-stream_loop", "-1", "-i", background_music])
-            # Narration at 100% (volume=1.0), music volume reduced to 10-12% (volume=music_volume)
-            # amix=inputs=2:duration=first:dropout_transition=2
-            filter_complex.append(f"[2:a]volume={music_volume}[bgm];[1:a][bgm]amix=inputs=2:duration=first:dropout_transition=2{audio_out_label}")
+            args.extend(["-stream_loop", "-1", "-i", background_music]) # Index 3
+            # Amix all 3: Voice (1), SFX (2), Music (3)
+            filter_complex.append(f"[3:a]volume={music_volume}[bgm];[1:a][2:a][bgm]amix=inputs=3:duration=first:dropout_transition=2{audio_out_label}")
         else:
-            filter_complex.append(f"[1:a]volume=1.0{audio_out_label}")
+            # Amix Voice (1) and SFX (2)
+            filter_complex.append(f"[1:a][2:a]amix=inputs=2:duration=first:dropout_transition=2{audio_out_label}")
 
         # Video filter for subtitles
         video_map_label = "0:v"

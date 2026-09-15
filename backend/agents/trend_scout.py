@@ -83,7 +83,7 @@ class TrendScoutAgent:
             f"Output strictly valid JSON in this exact structure:\n"
             f'{{"topics": [{{"topic": "Topic Title", "category": "Derived Category", "premise": "Brief explanation of why this is fascinating", "hook_idea": "Opening question or statement"}}]}}'
         )
-
+        
         response = llm_service.generate(prompt, json_mode=True)
         candidates = []
         try:
@@ -91,7 +91,21 @@ class TrendScoutAgent:
             raw_list = parsed.get("topics", [])
             for item in raw_list:
                 t = item.get("topic", "").strip()
-                if t and not any(t.lower() in past.lower() for past in recent_topics):
+                
+                # Check semantic memory
+                is_duplicate = False
+                try:
+                    from agentmemory import search_memory, create_memory
+                    results = search_memory("topics", t, n_results=1)
+                    if results and results[0]["distance"] < 0.2:
+                        is_duplicate = True
+                        logger.info(f"AgentMemory rejected duplicate topic: {t}")
+                    else:
+                        create_memory("topics", t)
+                except Exception as e:
+                    pass
+
+                if t and not is_duplicate and not any(t.lower() in past.lower() for past in recent_topics):
                     candidates.append({
                         "topic": t,
                         "category": item.get("category", category or "Trending"),

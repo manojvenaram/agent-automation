@@ -58,31 +58,36 @@ class MetadataAgent:
         response = llm_service.generate(prompt, json_mode=True)
         data = None
         try:
-            data = json.loads(response)
-        except Exception:
-            pass
+            # Clean markdown code blocks
+            clean_response = response.strip()
+            if clean_response.startswith("```json"):
+                clean_response = clean_response[7:]
+            if clean_response.startswith("```"):
+                clean_response = clean_response[3:]
+            if clean_response.endswith("```"):
+                clean_response = clean_response[:-3]
+            data = json.loads(clean_response.strip())
+        except Exception as e:
+            logger.warning(f"Metadata JSON parsing failed: {e}. Using dynamic fallback.")
 
         if not data or not data.get("titles"):
+            fallback_title = f"The Truth About {topic.title()}"
             data = {
                 "titles": [
-                    f"Why Space Smells Like Burnt Steak 🥩🚀",
-                    f"The Bizarre Scent Astronauts Smell in Outer Space",
-                    f"Why Space Has a Scent (And What It Is)",
-                    f"NASA Solved the Mystery of Space's Strange Smell",
-                    f"What Outer Space Actually Smells Like Will Shock You",
+                    fallback_title,
+                    f"What You Didn't Know About {topic.title()}",
                 ],
-                "selected_title": "Why Space Smells Like Burnt Steak 🥩🚀 #Shorts",
+                "selected_title": f"{fallback_title} #Shorts",
                 "description": (
-                    f"Did you know outer space has a distinct aroma? Astronauts returning from spacewalks "
-                    f"consistently report smelling seared steak, hot metal, and welding fumes. Here is the verified "
-                    f"science behind why dying stars make space smell like a cosmic barbecue!\n\n"
+                    f"{script.hook}\n\n"
+                    f"Learn more about {topic} in this quick #Shorts video!\n\n"
                     f"Sources:\n"
                     + "\n".join([f"- {s.title}: {s.url}" for s in sources])
-                    + "\n\n#Shorts #Space #Science #Astronomy #NASA"
+                    + "\n\n#Shorts #Facts #Trending"
                 ),
-                "hashtags": ["#Shorts", "#Space", "#Science", "#NASA", "#Cosmos"],
-                "tags": ["space smell", "nasa", "astronauts", "outer space", "science facts", "universe", "shorts"],
-                "pinned_comment": "Would you want to take a whiff of the cosmos? Tell us in the comments! 👇",
+                "hashtags": ["#Shorts", "#Facts", "#Trending"],
+                "tags": [topic.lower(), "facts", "shorts", "trending"],
+                "pinned_comment": f"What are your thoughts on {topic}? Tell us in the comments! 👇",
             }
 
         selected_title = data.get("selected_title") or data["titles"][0]

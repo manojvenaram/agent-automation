@@ -106,6 +106,56 @@ class ResearchService:
             logger.debug(f"Commons search for '{query}' failed: {e}")
         return media_list
 
+    async def browse_for_facts(self, topic: str) -> List[ResearchSource]:
+        """Use browser-use to autonomously search the web for deep facts."""
+        logger.info(f"Spawning autonomous browser to research: {topic}")
+        sources = []
+        try:
+            from browser_use import Agent
+            from langchain_groq import ChatGroq
+            import os
+            import json
+            import asyncio
+            
+            api_key = os.getenv("GROQ_API_KEY")
+            if not api_key:
+                logger.warning("GROQ_API_KEY not found for browser-use. Falling back to Wikipedia.")
+                return self.search_wikipedia(topic)
+                
+            llm = ChatGroq(temperature=0, groq_api_key=api_key, model_name="llama-3.1-70b-versatile")
+            
+            task = (
+                f"Search the web (Reddit, ScienceDaily, or news) for 2 highly fascinating, verifiable facts about '{topic}'. "
+                f"Return EXACTLY a JSON array of objects with keys: 'title', 'url', and 'extract'. Nothing else."
+            )
+            
+            agent = Agent(task=task, llm=llm)
+            result = await agent.run()
+            
+            # Extract JSON from result
+            res_str = str(result)
+            # Find json array in the string
+            start = res_str.find("[")
+            end = res_str.rfind("]") + 1
+            if start != -1 and end != 0:
+                json_str = res_str[start:end]
+                data = json.loads(json_str)
+                for item in data:
+                    sources.append(
+                        ResearchSource(
+                            url=item.get("url", "https://google.com"),
+                            title=item.get("title", f"Fact about {topic}"),
+                            extract=item.get("extract", "")
+                        )
+                    )
+        except Exception as e:
+            logger.warning(f"Browser-use research failed: {e}. Falling back to Wikipedia.")
+            
+        if not sources:
+            return self.search_wikipedia(topic)
+            
+        return sources
+
 
 # Global singleton instance
 research_service = ResearchService()

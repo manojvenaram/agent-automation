@@ -1,0 +1,15 @@
+{
+  "id": "20260915_142443_auto_short_45b3",
+  "title": "Discovering Universal Opportunity...",
+  "category": "science",
+  "state": "APPROVED",
+  "created_at": "2026-09-15T14:24:43.058352",
+  "updated_at": "2026-09-15T14:27:53.758026",
+  "video_path": "D:\\aiworksspace\\vido\\projects\\20260915_142443_auto_short_45b3\\render\\final.mp4",
+  "duration_sec": 29.49,
+  "quality_score": 100,
+  "youtube_url": null,
+  "auto_publish": true,
+  "repair_attempts": 0,
+  "error_message": "YouTube OAuth not configured. Video saved locally and ready for upload."
+}

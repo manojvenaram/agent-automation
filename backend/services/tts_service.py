@@ -28,7 +28,13 @@ class TTSService:
             "en-AU-NatashaNeural",
             "en-US-GuyNeural",
             "en-US-EricNeural",
-            "en-US-JennyNeural"
+            "en-US-JennyNeural",
+            "en-US-AnaNeural",
+            "en-US-AndrewNeural",
+            "en-US-BrianNeural",
+            "en-US-EmmaNeural",
+            "en-GB-RyanNeural",
+            "en-AU-WilliamNeural"
         ]
 
     async def _synthesize_edge_tts(self, text: str, output_path: str, voice: Optional[str] = None) -> str:
@@ -46,7 +52,9 @@ class TTSService:
     def _synthesize_voicestudio(self, text: str, output_path: str, voice: Optional[str] = None) -> str:
         """Synthesize text using local VoiceStudio (OpenAI-compatible) API."""
         import httpx
-        voice_to_use = voice or "alloy" # Default voice name
+        import random
+        openai_voices = ["alloy", "nova", "shimmer", "echo", "onyx", "fable"]
+        voice_to_use = voice or random.choice(openai_voices)
         url = "http://localhost:3900/v1/audio/speech"
         payload = {
             "model": "tts-1",

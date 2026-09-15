@@ -56,24 +56,32 @@ class ScriptWriterAgent:
         response = llm_service.generate(prompt, json_mode=True)
         script_data = None
         try:
-            script_data = json.loads(response)
+            # Clean markdown code blocks
+            clean_response = response.strip()
+            if clean_response.startswith("```json"):
+                clean_response = clean_response[7:]
+            if clean_response.startswith("```"):
+                clean_response = clean_response[3:]
+            if clean_response.endswith("```"):
+                clean_response = clean_response[:-3]
+            script_data = json.loads(clean_response.strip())
         except Exception as e:
-            logger.warning(f"Could not parse script JSON ({e}), utilizing template.")
+            logger.warning(f"Could not parse script JSON ({e}), utilizing dynamic template.")
 
         if not script_data or not script_data.get("scenes"):
-            # Clean fallback script
-            hook_text = hook or "Did you know that outer space smells like burnt steak?"
-            context_text = "Whenever astronauts return from a spacewalk and take off their helmets, they notice a distinct smoky, metallic aroma."
-            main_facts_text = "NASA scientists found this scent comes from polycyclic aromatic hydrocarbons—high-energy molecules produced by dying stars floating across the void."
-            payoff_text = "When astronauts repressurize their airlocks, these cosmic particles react with oxygen, creating the smell of a celestial barbecue."
-            cta_text = "Subscribe for more incredible universe secrets!"
+            # Dynamic fallback script based on topic
+            hook_text = hook or f"Have you ever wondered about {topic}?"
+            context_text = f"The truth behind {topic} is actually more fascinating than you might think."
+            main_facts_text = f"Research shows that this phenomenon has far-reaching implications that scientists are still studying today."
+            payoff_text = f"So the next time you think about {topic}, remember that there is always more than meets the eye."
+            cta_text = "Subscribe for more incredible facts!"
 
             scenes = [
-                ScriptScene(scene_index=1, narration=hook_text, duration_est=4.0, visual_description="Astronaut floating in deep space against glowing stars"),
-                ScriptScene(scene_index=2, narration=context_text, duration_est=7.5, visual_description="Astronaut removing helmet inside spacecraft airlock"),
-                ScriptScene(scene_index=3, narration=main_facts_text, duration_est=9.5, visual_description="Dying supernova star exploding in colorful space dust"),
-                ScriptScene(scene_index=4, narration=payoff_text, duration_est=8.5, visual_description="Cosmic molecules interacting with airlock atmosphere"),
-                ScriptScene(scene_index=5, narration=cta_text, duration_est=3.5, visual_description="Vibrant deep galaxy cluster rotating in cosmic dark"),
+                ScriptScene(scene_index=1, narration=hook_text, duration_est=4.0, visual_description=f"Cinematic visual representing {topic}"),
+                ScriptScene(scene_index=2, narration=context_text, duration_est=7.5, visual_description="Abstract background related to mystery"),
+                ScriptScene(scene_index=3, narration=main_facts_text, duration_est=9.5, visual_description="Research or scientific visualization"),
+                ScriptScene(scene_index=4, narration=payoff_text, duration_est=8.5, visual_description="Mind-blowing revelation sequence"),
+                ScriptScene(scene_index=5, narration=cta_text, duration_est=3.5, visual_description="Subscribe button animation over dynamic background"),
             ]
             full_narration = f"{hook_text} {context_text} {main_facts_text} {payoff_text} {cta_text}"
         else:

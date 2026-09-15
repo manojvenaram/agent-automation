@@ -1,0 +1,31 @@
+[Script Info]
+Title: YouTube Shorts Subtitles
+ScriptType: v4.00+
+WrapStyle: 0
+ScaledBorderAndShadow: yes
+PlayResX: 1080
+PlayResY: 1920
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: ShortsDefault,Arial,64,&H00FFFFFF,&H0000FFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,4,2,2,60,60,380,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.20,0:00:01.71,ShortsDefault,,0,0,0,,{\k45}ALMOST {\k45}NOBODY {\k38}KNOWS {\k23}THE
+Dialogue: 0,0:00:01.71,0:00:03.16,ShortsDefault,,0,0,0,,{\k30}REAL {\k46}REASON {\k46}BEHIND {\k23}WHY
+Dialogue: 0,0:00:03.16,0:00:04.60,ShortsDefault,,0,0,0,,{\k53}WEEKEND {\k38}SLEEP {\k15}IN {\k38}NEVER
+Dialogue: 0,0:00:04.60,0:00:06.84,ShortsDefault,,0,0,0,,{\k58}ACTUALLY {\k36}FIXES {\k94}EXHAUSTION... {\k36}UNTIL
+Dialogue: 0,0:00:06.84,0:00:08.22,ShortsDefault,,0,0,0,,{\k31}NOW. {\k15}AT {\k38}FIRST {\k54}GLANCE,
+Dialogue: 0,0:00:08.22,0:00:09.54,ShortsDefault,,0,0,0,,{\k23}WHY {\k54}WEEKEND {\k39}SLEEP {\k15}IN
+Dialogue: 0,0:00:09.54,0:00:11.57,ShortsDefault,,0,0,0,,{\k36}NEVER {\k58}ACTUALLY {\k36}FIXES {\k73}EXHAUSTION
+Dialogue: 0,0:00:11.57,0:00:12.82,ShortsDefault,,0,0,0,,{\k39}SEEMS {\k31}LIKE {\k8}A {\k47}NORMAL
+Dialogue: 0,0:00:12.82,0:00:14.86,ShortsDefault,,0,0,0,,{\k58}EVERYDAY {\k80}OCCURRENCE. {\k44}EXCEPT {\k22}THE
+Dialogue: 0,0:00:14.86,0:00:16.18,ShortsDefault,,0,0,0,,{\k46}DEEPER {\k23}YOU {\k39}LOOK, {\k23}THE
+Dialogue: 0,0:00:16.18,0:00:18.02,ShortsDefault,,0,0,0,,{\k59}STRANGER {\k22}THE {\k52}DETAILS {\k52}BECOME.
+Dialogue: 0,0:00:18.02,0:00:19.22,ShortsDefault,,0,0,0,,{\k34}HERE {\k17}IS {\k26}THE {\k43}TWIST
+Dialogue: 0,0:00:19.22,0:00:20.66,ShortsDefault,,0,0,0,,{\k46}NOBODY {\k23}SAW {\k53}COMING: {\k23}THE
+Dialogue: 0,0:00:20.66,0:00:22.50,ShortsDefault,,0,0,0,,{\k44}ENTIRE {\k52}PREMISE {\k22}WAS {\k66}INVERTED.
+Dialogue: 0,0:00:22.50,0:00:24.28,ShortsDefault,,0,0,0,,{\k22}AND {\k30}THAT {\k74}COMPLETELY {\k52}CHANGES
+Dialogue: 0,0:00:24.28,0:00:26.25,ShortsDefault,,0,0,0,,{\k80}EVERYTHING. {\k29}DROP {\k29}YOUR {\k58}THOUGHTS
+Dialogue: 0,0:00:26.25,0:00:27.02,ShortsDefault,,0,0,0,,{\k11}IN {\k16}THE {\k49}COMMENTS!

@@ -112,7 +112,7 @@ PlayResY: {settings.video_height}
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: ShortsDefault,Arial,{settings.caption_font_size},&H00FFFFFF,&H0000FFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,4,2,2,60,60,380,1
+Style: ShortsDefault,Arial,{settings.caption_font_size},&H00FFFFFF,&H0000FFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,4,2,5,60,60,0,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -120,10 +120,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         with open(ass_path, "w", encoding="utf-8") as f:
             f.write(header)
             for start, end, text in events:
-                start_str = self._format_ass_time(start)
-                end_str = self._format_ass_time(end)
-                
-                # Alex Hormozi Style Karaoke formatting
+                # Alex Hormozi Style Pop formatting
                 clean_text = text.replace("{", "").replace("}", "").upper()
                 words = clean_text.split()
                 
@@ -133,16 +130,27 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                 total_duration_sec = end - start
                 total_chars = sum(len(w) for w in words)
                 
-                karaoke_line = ""
-                for w in words:
-                    # Allocate time based on word length relative to total chars
+                word_start = start
+                for i, w in enumerate(words):
                     word_duration_sec = (len(w) / total_chars) * total_duration_sec
-                    # ASS karaoke tag {\kXX} is in centiseconds (1/100 of a second)
-                    centiseconds = int(round(word_duration_sec * 100))
-                    karaoke_line += f"{{\\k{centiseconds}}}{w} "
-                
-                karaoke_line = karaoke_line.strip()
-                f.write(f"Dialogue: 0,{start_str},{end_str},ShortsDefault,,0,0,0,,{karaoke_line}\n")
+                    word_end = word_start + word_duration_sec
+                    
+                    start_str = self._format_ass_time(word_start)
+                    end_str = self._format_ass_time(word_end)
+                    
+                    formatted_words = []
+                    for j, word in enumerate(words):
+                        if j == i:
+                            # Highlighted: Yellow & slightly larger
+                            fs_large = int(settings.caption_font_size * 1.15)
+                            formatted_words.append(f"{{\\c&H0000FFFF&\\fs{fs_large}}}{word}{{\\c&H00FFFFFF&\\fs{settings.caption_font_size}}}")
+                        else:
+                            formatted_words.append(word)
+                            
+                    karaoke_line = " ".join(formatted_words)
+                    f.write(f"Dialogue: 0,{start_str},{end_str},ShortsDefault,,0,0,0,,{karaoke_line}\n")
+                    
+                    word_start = word_end
 
 
 # Global singleton instance

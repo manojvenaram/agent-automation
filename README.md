@@ -59,9 +59,11 @@ graph TD
 ## ✨ Core Features
 
 - 💸 **100% Free Stack**: Uses `Groq (Llama-3.1)` (Blazing Fast Free Tier), Pexels API (Free), Edge-TTS (Free), and FFmpeg (Open Source). No paid subscriptions required.
-- 🧠 **TurboVec Semantic Memory & Topic Blacklisting**: The agent builds a semantic index of its memory and automatically blacklists every topic it generates, ensuring it **never** uploads the same video twice.
+- 🌐 **Autonomous Browser Research**: Integrated with `browser-use` and `langchain`, the agent spins up a headless browser to actively scrape Reddit, ScienceDaily, and trending news for the most fascinating, up-to-date facts.
+- 🧠 **AgentMemory Semantic Engine**: The agent builds a semantic index of its memory using `agentmemory` and mathematically blocks duplicate topics via vector distance, ensuring it **never** uploads the same video twice.
+- 🔬 **Scientific Rigor Fact-Checking**: The AI acts as a rigorous peer-reviewer, aggressively cross-referencing scripts against physics and biology paradigms to eliminate LLM hallucinations.
+- 🎬 **Viral Visuals & SFX**: Features dynamic Ken Burns motion (pan/zoom) on all imagery, discrete word-by-word "Hormozi-style" pop captions, and procedural impact Sound Effects to maximize viewer retention in the first 3 seconds.
 - ⚡ **Ultra-Low Resource Formats**: Runs flawlessly on basic 8GB laptops. It automatically pivots between high-end cinematic edits and lightweight formats like Reddit Stories, Shower Thoughts, Quizzes, and Motivational Quotes depending on available memory.
-- 🚨 **Anti-Hallucination Quality Control**: The agent evaluates its own scripts. If it hallucinates or lacks factual confidence, the video is flagged as `NEEDS_REVIEW` and blocked from YouTube to protect your channel's reputation.
 - 📱 **Telegram Bot Integration**: Directly uploads the finished AI video to your Telegram chat immediately after rendering. If YouTube authentication isn't set up yet, you'll still get the file seamlessly on your phone!
 
 ---

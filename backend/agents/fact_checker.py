@@ -38,6 +38,7 @@ class FactCheckerAgent:
             f"Script:\n\"{script.full_narration}\"\n\n"
             f"Research Evidence:\n{evidence_text}\n\n"
             f"Task: Extract 3 to 5 core factual claims from the script and verify each claim against the evidence.\n"
+            f"SCIENTIFIC SKILL TRIGGER: Act as a peer-reviewer for a scientific journal. Apply rigorous fact-checking. Cross-reference against known physics, biology, and historical databases if evidence is insufficient.\n"
             f"Status options: 'VERIFIED', 'UNCERTAIN', 'CONTRADICTED'.\n"
             f"Output strictly JSON in this format:\n"
             f'{{"claims": [{{"claim_text": "...", "status": "VERIFIED", "confidence": 0.95, "evidence": "..."}}], "overall_confidence": 0.92}}'
