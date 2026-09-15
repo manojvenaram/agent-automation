@@ -38,24 +38,26 @@ jobs:
         run: |
           mkdir -p credentials
           
-          # Optional: Reconstruct client_secrets.json if you store it in a secret
-          # echo '${{ secrets.YOUTUBE_CLIENT_SECRETS }}' > credentials/client_secrets.json
+          # Reconstruct client_secrets.json from GitHub Secrets
+          echo '${{ secrets.YOUTUBE_CLIENT_SECRETS }}' > credentials/client_secrets.json
           
-          # Optional: Reconstruct token.pickle base64 if you store it in a secret
-          # echo '${{ secrets.YOUTUBE_TOKEN_PICKLE_BASE64 }}' | base64 -d > credentials/token.pickle
+          # Reconstruct token.pickle base64 from GitHub Secrets
+          echo '${{ secrets.YOUTUBE_TOKEN_PICKLE_BASE64 }}' | base64 -d > credentials/token.pickle
 
       - name: Run Daily Self-Improvement Review
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          LLM_PROVIDER: "gemini"
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          LLM_PROVIDER: "groq"
           ENVIRONMENT: "production"
         run: |
           python app.py review
 
       - name: Run Autonomous Shorts Agent
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          LLM_PROVIDER: "gemini"
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          LLM_PROVIDER: "groq"
           AUTO_PUBLISH: "true"
           ENVIRONMENT: "production"
         run: |
