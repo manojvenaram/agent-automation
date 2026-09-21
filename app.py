@@ -101,6 +101,7 @@ def cmd_run_agent(args):
         topic_input=args.topic,
         category=args.category,
         auto_publish=settings.auto_publish,
+        video_format=args.format,
     )
 
     print("\n" + "=" * 60)
@@ -259,6 +260,7 @@ def main():
     run_parser = subparsers.add_parser("run-agent", help="Run full autonomous production pipeline")
     run_parser.add_argument("--topic", type=str, help="Specific topic (optional)")
     run_parser.add_argument("--category", type=str, default="science", help="Niche category")
+    run_parser.add_argument("--format", type=str, default="short", choices=["short", "long"], help="Video format (short or long)")
     run_parser.add_argument("--auto-publish", action="store_true", help="Publish automatically when QC passes")
     run_parser.add_argument("--demo", action="store_true", help="Run in demo mode")
 

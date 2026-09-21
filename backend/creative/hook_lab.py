@@ -67,37 +67,37 @@ class HookLab:
         """
         Evaluate a hook across the 6 retention dimensions.
         """
-        lower = text.lower()
+        # Use LLM for semantic hook evaluation
+        prompt = f"""
+Evaluate the following video hook on 5 dimensions from 0 to 100.
+Hook: "{text}"
+Archetype: "{archetype}"
+Category: "{category}"
+
+Provide a JSON output with these keys and integer values:
+"curiosity": Does it provoke a burning desire to know the answer? (0-100)
+"surprise": Does it subvert expectations or reveal something shocking? (0-100)
+"emotional_impact": Does it trigger fear, joy, awe, or urgency? (0-100)
+"clarity": Is the premise immediately understandable in under 2 seconds? (0-100)
+"novelty": Does it feel fresh and original rather than cliché? (0-100)
+"""
+        try:
+            llm_res = self.ollama.generate(prompt=prompt, json_mode=True)
+            scores = self.ollama.parse_json_safely(llm_res) or {}
+        except Exception as e:
+            logger.warning(f"Hook LLM scoring failed: {e}. Falling back to default.")
+            scores = {}
+
+        curiosity = int(scores.get("curiosity", 75))
+        surprise = int(scores.get("surprise", 70))
+        emotional = int(scores.get("emotional_impact", 65))
+        clarity = int(scores.get("clarity", 80))
+        novelty = int(scores.get("novelty", 70))
+
+        # Base clarity penalty for long hooks
         words = text.split()
-        word_count = len(words)
-
-        # Base clarity: punchy (6-14 words) is ideal for 1st-second scroll-stopping
-        if 5 <= word_count <= 15:
-            clarity = 92
-        elif word_count < 5:
-            clarity = 75
-        else:
-            clarity = max(50, 90 - (word_count - 15) * 3)
-
-        # Curiosity signals
-        curiosity_signals = ["why", "how", "secret", "nobody", "never", "hidden", "reason", "truth", "what if"]
-        curiosity_count = sum(1 for w in curiosity_signals if w in lower)
-        curiosity = min(98, 65 + curiosity_count * 10)
-
-        # Surprise signals
-        surprise_signals = ["actually", "bizarre", "insane", "impossible", "shocking", "unexpected", "never", "fake", "destroy"]
-        surprise_count = sum(1 for w in surprise_signals if w in lower)
-        surprise = min(98, 60 + surprise_count * 12)
-
-        # Emotional impact
-        emotional_signals = ["warning", "danger", "mistake", "ruined", "hero", "terrifying", "craziest", "genius", "genius"]
-        emotional_count = sum(1 for w in emotional_signals if w in lower)
-        emotional = min(95, 55 + emotional_count * 12)
-
-        # Novelty
-        novelty = 80
-        if any(w in lower for w in ["just discovered", "new", "first time", "strange anomaly", "revealed"]):
-            novelty = 94
+        if len(words) > 15:
+            clarity = max(30, clarity - (len(words) - 15) * 5)
 
         # Retention potential: derived from strong scroll-stopping patterns
         retention = int(

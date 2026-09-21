@@ -49,6 +49,7 @@ class ScriptWriterAgent:
             f"   - cta: Short 1-sentence prompt.\n"
             f"3. Do NOT use filler words like 'welcome back', 'in this video', or 'hey guys'.\n"
             f"4. Provide 4 to 6 scenes with duration_est and visual_description.\n"
+            f"5. CRITICAL: Never reuse scripts, narratives, or specific visuals from previous videos. Everything must be 100% unique and original.\n"
             f"Output strictly JSON:\n"
             f'{{"hook": "...", "context": "...", "main_facts": "...", "payoff": "...", "cta": "...", "scenes": [{{"scene_index": 1, "narration": "...", "duration_est": 4.0, "visual_description": "..."}}]}}'
         )

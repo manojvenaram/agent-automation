@@ -62,16 +62,13 @@ class DailyReviewAgent:
     def run_review(self, target_date: Optional[str] = None) -> DailyReviewResult:
         """
         Executes daily self-learning review based on recent production and performance.
+        Uses the LLM to dynamically generate insights based on real project data.
         """
         review_date = target_date or datetime.utcnow().strftime("%Y-%m-%d")
         projects = list_projects(limit=50)
         category_scores = get_category_scores()
 
-        # Group projects by status and score
-        completed = [p for p in projects if p.state.value in ["READY", "QC_PASSED", "APPROVED", "PUBLISHED"] or (p.quality_score is not None and p.quality_score >= 80)]
-        failed = [p for p in projects if p.state.value == "FAILED" or (p.quality_score is not None and p.quality_score < 70)]
-
-        # Evaluate winning categories
+        # Gather real data
         cat_performance: Dict[str, List[int]] = {}
         for p in projects:
             if p.quality_score is not None:
@@ -80,60 +77,52 @@ class DailyReviewAgent:
                     cat_performance[cat] = []
                 cat_performance[cat].append(p.quality_score)
 
-        top_cats = []
-        low_cats = []
-        for cat, scores in cat_performance.items():
-            avg = sum(scores) / len(scores)
-            if avg >= 85:
-                top_cats.append(f"{cat} (avg: {avg:.1f})")
-            elif avg < 75:
-                low_cats.append(f"{cat} (avg: {avg:.1f})")
+        stats_payload = {
+            "top_categories": [c["category"] for c in category_scores[:3]],
+            "category_averages": {cat: sum(scores)/len(scores) for cat, scores in cat_performance.items()},
+            "failed_count": len([p for p in projects if p.state.value == "FAILED" or (p.quality_score is not None and p.quality_score < 70)]),
+            "success_count": len([p for p in projects if p.quality_score is not None and p.quality_score >= 80]),
+        }
 
-        # Synthesize insights
-        worked_text = (
-            f"Strong retention on {', '.join(top_cats) if top_cats else 'animated cartoons and science explainers'}. "
-            f"Curiosity hooks under 10 words consistently beat longer negative-frame hooks. "
-            f"1080x1920 procedural motion graphics rendered with zero QC technical defects."
-        )
+        # Prompt LLM for insights
+        prompt = f"""
+You are the Autonomous Video Studio's strategic AI director.
+Analyze today's production statistics and write a daily review.
+Data: {json.dumps(stats_payload)}
 
-        failed_text = (
-            f"Overly generic news topics without strong visual hooks had lower engagement. "
-            f"{', '.join(low_cats) if low_cats else 'None'} showed slightly lower average quality scores. "
-            f"Videos exceeding 55 seconds showed minor retention dropoff in the final 5 seconds."
-        )
+Output strictly valid JSON:
+{{
+  "what_worked": "1-2 sentences on successful patterns",
+  "what_failed": "1-2 sentences on what to avoid",
+  "what_surprised": "1-2 sentences on unexpected data",
+  "category_insights": "1 sentence on category allocation",
+  "lessons": "3 bullet points of strategic changes"
+}}
+"""
+        response = self.ollama.generate(prompt=prompt, json_mode=True)
+        data = self.ollama.parse_json_safely(response) or {}
 
-        surprised_text = (
-            "Cross-category concepts (e.g. Science + Humor, Cartoon + Tech) demonstrated 25% higher simulated retention "
-            "than single-discipline explainer videos. Byte & Sam character duo established strong thematic consistency."
-        )
+        worked_text = data.get("what_worked", "Continued success in core categories.")
+        failed_text = data.get("what_failed", "No major failures reported.")
+        surprised_text = data.get("what_surprised", "Performance remained stable.")
+        cat_insights = data.get("category_insights", "Maintained 80/20 portfolio split.")
+        lessons = data.get("lessons", "1. Maintain current strategy.")
 
-        cat_insights = (
-            f"Leaderboard top tier: {[c['category'] for c in category_scores[:3]]}. "
-            f"Maintained 80% proven allocation / 20% experiment split to prevent audience fatigue."
-        )
-
-        lessons = (
-            "1. Deliver the visual punchline before the 45-second mark.\n"
-            "2. Ensure first 1-second spoken audio has high frequency energy and zero silent intro padding.\n"
-            "3. Favor unexpected contrast ('Byte doubts human logic') to drive comments and debate."
-        )
-
-        strategy_changes = (
-            "1. Increase allocation for Cartoon and Humor hybrids by +5%.\n"
-            "2. Keep target duration strictly between 30 and 42 seconds for maximum completion rate.\n"
-            "3. Enforce Hook Lab minimum score threshold of 85 before passing to Video Editor."
-        )
+        strategy_changes = "1. Adopted LLM insights."
 
         # Dynamic weight adjustments
         adjustments: Dict[str, float] = {}
         for c in category_scores:
             cat_name = c["category"]
             curr_score = c["score"]
-            if cat_name in ["cartoon", "humor", "science", "space"]:
+            avg = stats_payload["category_averages"].get(cat_name, 50)
+            
+            # Simple algorithmic adjustment based on real averages
+            if avg > 80:
                 new_score = min(98.0, curr_score + 1.5)
                 adjustments[cat_name] = round(new_score, 1)
                 update_category_score(cat_name, delta=1.5, new_retention=82.0)
-            elif cat_name in ["news"]:
+            elif avg < 70:
                 new_score = max(50.0, curr_score - 0.5)
                 adjustments[cat_name] = round(new_score, 1)
                 update_category_score(cat_name, delta=-0.5, new_retention=68.0)
@@ -159,6 +148,5 @@ class DailyReviewAgent:
             strategy_changes=strategy_changes,
             weight_adjustments=adjustments,
         )
-
 
 daily_review_agent = DailyReviewAgent()

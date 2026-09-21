@@ -20,6 +20,7 @@ class PublisherAgent:
         self,
         project: ProjectModel,
         metadata: YouTubeMetadata,
+        publish_at: Optional[str] = None,
     ) -> Dict[str, str]:
         """
         Publishes video to YouTube following official API guidelines.
@@ -81,6 +82,7 @@ class PublisherAgent:
                 tags=metadata.tags,
                 privacy_status=settings.youtube_privacy_status,
                 category_id=settings.youtube_category_id,
+                publish_at=publish_at,
             )
             update_project_state(
                 project_id=project.id,

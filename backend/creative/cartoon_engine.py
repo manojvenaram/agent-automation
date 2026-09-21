@@ -37,6 +37,8 @@ class CartoonEngine:
             "C:\\Windows\\Fonts\\segoeuib.ttf",
             "C:\\Windows\\Fonts\\impact.ttf",
             "C:\\Windows\\Fonts\\arial.ttf",
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf", # Linux fallback
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",         # Linux fallback
         ]
         for p in font_paths:
             if Path(p).exists():

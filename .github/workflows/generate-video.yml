@@ -1,0 +1,66 @@
+name: Autonomous Video Generation
+
+on:
+  workflow_dispatch:
+    inputs:
+      topic:
+        description: 'Topic for the video (optional)'
+        required: false
+        default: ''
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        visual_style: ['cartoon', 'stickman']
+
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      LLM_PROVIDER: groq
+      ENVIRONMENT: production
+      DEBUG: true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-liberation fonts-dejavu imagemagick
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          playwright install chromium
+
+      - name: Run Autonomous Agent
+        run: |
+          if [ "${{ matrix.visual_style }}" == "stickman" ]; then
+            python app.py run-agent --category "stickman" --topic "${{ github.event.inputs.topic }}"
+          else
+            python app.py run-agent --category "cartoon" --topic "${{ github.event.inputs.topic }}"
+          fi
+
+      - name: Upload Video Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-video-${{ matrix.visual_style }}
+          path: projects/*/visuals/*.mp4
+          if-no-files-found: ignore
+
+      - name: Upload Project Folder (Debug)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: full-project-${{ matrix.visual_style }}
+          path: projects/
+          if-no-files-found: ignore

@@ -39,6 +39,9 @@ class ShortsFormat(str, Enum):
     WOULD_YOU_RATHER = "WOULD_YOU_RATHER"
     SHOWER_THOUGHTS = "SHOWER_THOUGHTS"
     MOTIVATIONAL_QUOTE = "MOTIVATIONAL_QUOTE"
+    LONG_FORM_DOCUMENTARY = "LONG_FORM_DOCUMENTARY"
+    LONG_FORM_ESSAY = "LONG_FORM_ESSAY"
+    STICKMAN_EXPLAINER = "STICKMAN_EXPLAINER"
 
 
 class VisualTreatment(str, Enum):
@@ -55,8 +58,11 @@ class VisualTreatment(str, Enum):
     TEXT_ANIMATION = "TEXT_ANIMATION"
     CARTOON = "CARTOON"
     PANNING_BACKGROUND = "PANNING_BACKGROUND"
-    MINIMAL_TEXT_ONLY = "MINIMAL_TEXT_ONLY"
     SPLIT_SCREEN_STATIC = "SPLIT_SCREEN_STATIC"
+    MINIMAL_TEXT_ONLY = "MINIMAL_TEXT_ONLY"
+    WHITEBOARD_STICKMAN = "WHITEBOARD_STICKMAN"
+    CINEMATIC = "CINEMATIC"
+    WEB_RENDER = "WEB_RENDER"
 
 
 @dataclass
@@ -167,6 +173,10 @@ class CreativeDirectorAgent:
         # Ask Content Brain for the optimal format via Explore/Exploit
         best_format_str = content_brain.select_script_format(category)
         
+        # Override to Stickman if explicitly requested by topic (simple heuristic)
+        if "stickman" in lower or "whiteboard" in lower:
+            return ShortsFormat.STICKMAN_EXPLAINER
+            
         try:
             return ShortsFormat[best_format_str]
         except KeyError:
@@ -187,6 +197,9 @@ class CreativeDirectorAgent:
         cat = category.lower()
         if fmt == ShortsFormat.MINI_CARTOON or cat == "cartoon":
             return VisualTreatment.CARTOON
+            
+        if fmt == ShortsFormat.STICKMAN_EXPLAINER:
+            return VisualTreatment.WHITEBOARD_STICKMAN
 
         if fmt in [ShortsFormat.VISUAL_EXPERIMENT, ShortsFormat.ANIMATION, ShortsFormat.SIMULATION]:
             return VisualTreatment.ANIMATION
@@ -194,16 +207,22 @@ class CreativeDirectorAgent:
         if cat in ["geography", "history"] or fmt == ShortsFormat.TIMELINE:
             return VisualTreatment.MAPS
 
-        if cat in ["technology", "gaming"]:
-            return VisualTreatment.MOTION_GRAPHICS
+        if cat in ["technology", "gaming", "coding", "software"]:
+            return VisualTreatment.WEB_RENDER
 
         if fmt in [ShortsFormat.TOP_3, ShortsFormat.TOP_5, ShortsFormat.COUNTDOWN]:
             return VisualTreatment.ORIGINAL_GRAPHICS
 
         if cat == "news":
             return VisualTreatment.TEXT_ANIMATION
+            
+        if fmt in [ShortsFormat.REDDIT_STORY]:
+            return VisualTreatment.WEB_RENDER
+            
+        if fmt in [ShortsFormat.DOCUMENTARY, ShortsFormat.LONG_FORM_DOCUMENTARY, ShortsFormat.LONG_FORM_ESSAY, ShortsFormat.MYSTERY, ShortsFormat.DRAMATIC_STORY]:
+            return VisualTreatment.CINEMATIC
 
-        return VisualTreatment.MOTION_GRAPHICS
+        return VisualTreatment.CINEMATIC # Default everything else to cinematic if it's not a cartoon/stickman
 
     def determine_direction(
         self,
@@ -211,13 +230,19 @@ class CreativeDirectorAgent:
         category: str,
         summary: str = "",
         candidate_characters: Optional[List[str]] = None,
+        video_format: str = "short",
     ) -> CreativeDirection:
         """
-        Creates a complete creative direction strategy for a Short.
+        Creates a complete creative direction strategy for a Video.
         """
         humor_score = self.calculate_humor_suitability(topic, category, summary)
         is_cartoon = category.lower() in ["cartoon", "original fiction"] or "byte" in topic.lower() or "sam" in topic.lower()
-        fmt = self.select_format(topic, category, humor_score, is_fiction_or_cartoon=is_cartoon)
+        
+        if video_format == "long":
+            fmt = ShortsFormat.LONG_FORM_DOCUMENTARY if humor_score < 50 else ShortsFormat.LONG_FORM_ESSAY
+        else:
+            fmt = self.select_format(topic, category, humor_score, is_fiction_or_cartoon=is_cartoon)
+            
         visual = self.select_visual_treatment(category, fmt)
 
         # Assign character if cartoon/fiction or high humor storytelling
@@ -244,6 +269,16 @@ class CreativeDirectorAgent:
             pacing = 135
             beat_sec = 2.0
             struct = "CHARACTER_PROBLEM_CHAOS_RESOLUTION" if is_cartoon else "HOOK_SETUP_ESCALATION_TWIST_PAYOFF"
+        elif fmt in [ShortsFormat.LONG_FORM_DOCUMENTARY, ShortsFormat.LONG_FORM_ESSAY]:
+            mood = "dramatic"
+            pacing = 110
+            beat_sec = 5.0
+            struct = "HOOK_INTRO_DEEPDIVE_CLIMAX_CONCLUSION"
+        elif fmt == ShortsFormat.STICKMAN_EXPLAINER:
+            mood = "comedic"
+            pacing = 140
+            beat_sec = 3.0
+            struct = "HOOK_SETUP_ESCALATION_TWIST_PAYOFF"
         elif fmt in [ShortsFormat.MYSTERY, ShortsFormat.DRAMATIC_STORY]:
             mood = "mysterious"
             pacing = 115

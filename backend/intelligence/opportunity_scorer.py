@@ -8,11 +8,13 @@ from typing import Any, Dict, List
 from backend.core.database import get_category_scores
 from backend.core.logging import logger
 from backend.memory.memory_manager import memory_manager
+from backend.services.llm_service import LLMService
+import json
 
 
 class OpportunityScorer:
-    def __init__(self):
-        pass
+    def __init__(self, llm_service=None):
+        self.llm = llm_service or LLMService()
 
     def evaluate_opportunity(self, candidate: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -35,38 +37,34 @@ class OpportunityScorer:
         elif trend_type == "SEASONAL": trend_score = 82.0
         elif trend_type == "EVERGREEN": trend_score = 80.0
 
-        # 2. Audience Score (Tier 1 English markets appeal)
-        audience_score = 85.0
-        if any(w in lower_t for w in ["world", "global", "us", "record", "human", "body", "everybody", "mind"]):
-            audience_score += 8.0
+        # Use LLM for semantic multidimensional scoring
+        prompt = f"""
+Evaluate the following content topic across 6 dimensions from 0 to 100.
+Topic: "{topic}"
+Premise: "{premise}"
+Category: "{category}"
 
-        # 3. Curiosity Score (Questions, counter-intuitive facts)
-        curiosity_score = 78.0
-        curiosity_triggers = ["why", "how", "secret", "never", "bizarre", "impossible", "what if", "hidden", "shocking"]
-        for trig in curiosity_triggers:
-            if trig in lower_t:
-                curiosity_score = min(98.0, curiosity_score + 4.0)
+Provide a JSON output with these keys and integer values:
+"audience_score": Tier 1 English market appeal (0-100)
+"curiosity_score": Counter-intuitive or 'did you know' factor (0-100)
+"originality_score": Avoidance of oversaturated tropes (0-100)
+"visual_score": Can be illustrated easily with graphics/photos (0-100)
+"story_score": Narrative potential with setup and twist (0-100)
+"humor_score": Comedy suitability (0-100)
+"""
+        try:
+            llm_res = self.llm.generate(prompt=prompt, json_mode=True)
+            scores = self.llm.parse_json_safely(llm_res) or {}
+        except Exception as e:
+            logger.warning(f"Semantic scoring failed: {e}. Falling back to default scores.")
+            scores = {}
 
-        # 4. Originality Score (Avoid oversaturated tropes)
-        originality_score = 86.0
-        oversaturated = ["elon musk says", "chatgpt 5", "ai replaces", "crypto boom", "top 10 richest"]
-        if any(sat in lower_t for sat in oversaturated):
-            originality_score = 45.0
-
-        # 5. Visual Score (Can be illustrated easily with graphics, animation, or photos)
-        visual_score = 84.0
-        if any(w in lower_t for w in ["space", "animal", "cartoon", "byte", "animation", "game", "world", "water"]):
-            visual_score = 92.0
-
-        # 6. Story Score (Narrative potential with setup and twist)
-        story_score = 82.0
-        if any(w in lower_t for w in ["when", "who", "history", "story", "solved", "war", "discovered"]):
-            story_score = 90.0
-
-        # 7. Humor Score
-        humor_score = 50.0
-        if category in ["humor", "cartoons"] or any(w in lower_t for w in ["funny", "unsuccessful", "confused", "meme", "bizarre"]):
-            humor_score = 88.0
+        audience_score = float(scores.get("audience_score", 85.0))
+        curiosity_score = float(scores.get("curiosity_score", 78.0))
+        originality_score = float(scores.get("originality_score", 86.0))
+        visual_score = float(scores.get("visual_score", 84.0))
+        story_score = float(scores.get("story_score", 82.0))
+        humor_score = float(scores.get("humor_score", 50.0))
 
         # 8. Shareability Score ("Did you know?" factor)
         shareability_score = (curiosity_score + audience_score) / 2.0

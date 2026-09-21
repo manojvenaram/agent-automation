@@ -79,6 +79,7 @@ class YouTubeService:
         tags: Optional[List[str]] = None,
         privacy_status: Optional[str] = None,
         category_id: Optional[str] = None,
+        publish_at: Optional[str] = None,
     ) -> Dict[str, str]:
         """
         Uploads video to YouTube via official API with resumable chunked upload.
@@ -89,6 +90,10 @@ class YouTubeService:
 
         status = privacy_status or settings.youtube_privacy_status
         category = category_id or settings.youtube_category_id
+
+        # YouTube API requires privacyStatus to be "private" when scheduling a future publishAt time
+        if publish_at:
+            status = "private"
 
         # Ensure title contains #Shorts for YouTube algorithm detection
         final_title = title.strip()
@@ -110,6 +115,9 @@ class YouTubeService:
                 "selfDeclaredMadeForKids": False,
             },
         }
+        
+        if publish_at:
+            body["status"]["publishAt"] = publish_at
 
         media = MediaFileUpload(
             video_path,

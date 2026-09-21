@@ -22,6 +22,10 @@ class ContentPortfolioEngine:
             ("animals", "science", "Evolutionary superpowers of bizarre creatures"),
             ("food", "science", "The chemical science behind why foods taste amazing or weird"),
             ("original fiction", "cartoons", "Short comedic sci-fi mini story"),
+            ("gaming", "sports", "The insane physical training regimes of e-sports champions"),
+            ("technology", "humor", "Hilarious multi-million dollar tech inventions that failed instantly"),
+            ("sports", "science", "The extreme physics and biomechanics behind impossible athletic world records"),
+            ("gaming", "mystery", "Unsolved easter eggs and bizarre myths hidden inside popular video games"),
         ]
 
     def select_next_portfolio_target(self, forced_category: Optional[str] = None) -> Tuple[str, bool]:

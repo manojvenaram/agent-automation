@@ -37,13 +37,16 @@ graph TD
     A[🕒 GitHub Actions / Kaggle Cron] --> B(🧠 Topic Discovery & TurboVec Memory Check)
     B --> C{Unique Topic?}
     C -- No --> B
-    C -- Yes --> D(📚 AI Fact Research & Script Generation)
-    D --> E{Quality Control & Fact Check > 80%?}
-    E -- No --> F[⚠️ Flag as NEEDS_REVIEW]
-    E -- Yes --> G(🎙️ Edge-TTS Neural Voiceover)
-    G --> H(🖼️ Pexels Background Video Sourcing)
-    H --> I(🎬 FFmpeg Video Compilation & ASS Captions)
-    I --> J[✅ Rendered 1080x1920 MP4]
+    C -- Yes --> D(📚 Groq AI Fact Research & Scripting)
+    D --> E(🎨 Creative Director Agent)
+    E --> F{Route Visual Style}
+    F --> |Documentary| G1(Cinematic Pipeline)
+    F --> |Tech/Social| G2(Hyperframes Web Render)
+    F --> |Humor| G3(Whiteboard/Cartoon AI)
+    G1 --> H(🎙️ 3-Tier Audio & FFmpeg Edit)
+    G2 --> H
+    G3 --> H
+    H --> J[✅ Rendered 1080x1920 MP4]
     
     J --> K{AUTO_PUBLISH?}
     K -- Yes --> L[🚀 Upload to YouTube via Data API]
@@ -58,13 +61,17 @@ graph TD
 
 ## ✨ Core Features
 
-- 💸 **100% Free Stack**: Uses `Groq (Llama-3.1)` (Blazing Fast Free Tier), Pexels API (Free), Edge-TTS (Free), and FFmpeg (Open Source). No paid subscriptions required.
-- 🌐 **Autonomous Browser Research**: Integrated with `browser-use` and `langchain`, the agent spins up a headless browser to actively scrape Reddit, ScienceDaily, and trending news for the most fascinating, up-to-date facts.
-- 🧠 **AgentMemory Semantic Engine**: The agent builds a semantic index of its memory using `agentmemory` and mathematically blocks duplicate topics via vector distance, ensuring it **never** uploads the same video twice.
-- 🔬 **Scientific Rigor Fact-Checking**: The AI acts as a rigorous peer-reviewer, aggressively cross-referencing scripts against physics and biology paradigms to eliminate LLM hallucinations.
-- 🎬 **Viral Visuals & SFX**: Features dynamic Ken Burns motion (pan/zoom) on all imagery, discrete word-by-word "Hormozi-style" pop captions, and procedural impact Sound Effects to maximize viewer retention in the first 3 seconds.
-- ⚡ **Ultra-Low Resource Formats**: Runs flawlessly on basic 8GB laptops. It automatically pivots between high-end cinematic edits and lightweight formats like Reddit Stories, Shower Thoughts, Quizzes, and Motivational Quotes depending on available memory.
-- 📱 **Telegram Bot Integration**: Directly uploads the finished AI video to your Telegram chat immediately after rendering. If YouTube authentication isn't set up yet, you'll still get the file seamlessly on your phone!
+- 💸 **100% Free Stack**: Uses `Groq (Llama-3.1)` (Blazing Fast Free Tier) for scripting, `Gemini 1.5 Flash` for real-time autonomous trend brainstorming, Pexels API (Free), Edge-TTS (Free), Playwright (Free Web Rendering), and FFmpeg (Open Source).
+- 🧠 **Dynamic Dual-LLM Intelligence**: The agent actively monitors internet trends. If the internet is slow, it automatically falls back to Gemini to hallucinate 100% brand new, highly obscure topics across 17 categories (Gaming, Sports, Science, etc.).
+- 🎭 **4 Visual Render Pipelines**: The agent routes topics to one of four completely distinct visual styles:
+  1. `CinematicPipeline`: High-end documentary style with letterboxing, color-graded footage, and ambient music.
+  2. `HyperframesPipeline`: Web-rendered Playwright engine building custom HTML/CSS dynamic UI animations (like Reddit or HackerNews styles).
+  3. `WhiteboardPipeline`: Doodle/stickman visual explainer using Pollinations AI.
+  4. `CartoonPipeline`: 3D animated character styles using Pollinations AI.
+- 💾 **Semantic Deduplication**: The agent builds a semantic index of its memory using `TurboVec` and mathematically blocks duplicate topics via vector distance, ensuring it **never** uploads the same video twice.
+- 🎙️ **3-Tier Audio Engine**: Automatically cascades between local VoiceStudio (OpenAI TTS), Microsoft Edge-TTS, and offline Windows Pyttsx3. Generates its own procedural FFmpeg sine-wave music if you don't provide background tracks!
+- ⚡ **Automated Playwright Actions**: The GitHub Actions CI/CD automatically installs Chromium binaries to support headless web-UI rendering.
+- 📱 **Telegram Bot Integration**: Directly uploads the finished AI video to your Telegram chat immediately after rendering.
 
 ---
 

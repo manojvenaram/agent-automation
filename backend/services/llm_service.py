@@ -68,8 +68,11 @@ class LLMService:
         json_mode: bool = False,
         temperature: Optional[float] = None,
         timeout: Optional[int] = None,
+        provider_override: Optional[str] = None,
     ) -> str:
-        if self.provider == "groq":
+        active_provider = provider_override or self.provider
+
+        if active_provider == "groq":
             try:
                 url = "https://api.groq.com/openai/v1/chat/completions"
                 headers = {
@@ -97,7 +100,7 @@ class LLMService:
                 logger.warning(f"Groq request failed ({e}). Utilizing rule-based fallback generator.")
                 return self._generate_fallback(prompt, json_mode)
 
-        if self.provider == "ollama":
+        if active_provider == "ollama":
             try:
                 url = f"{settings.ollama_base_url}/api/generate"
                 payload = {
@@ -121,7 +124,7 @@ class LLMService:
                 logger.warning(f"Ollama request failed ({e}). Utilizing rule-based fallback generator.")
                 return self._generate_fallback(prompt, json_mode)
 
-        if not self.client:
+        if not self.client and active_provider == "gemini":
             logger.warning("Gemini API key is missing. Utilizing rule-based fallback generator.")
             return self._generate_fallback(prompt, json_mode)
 

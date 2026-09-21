@@ -121,7 +121,7 @@ class UniversalTrendEngine:
 
         # If external feeds were limited or offline, supplement with universal evergreen bank
         if len(filtered) < max_candidates:
-            fallbacks = self._get_universal_fallback_bank()
+            fallbacks = self._generate_dynamic_fallback_topics(max_candidates - len(filtered))
             for fb in fallbacks:
                 if fb["topic"].lower() not in seen and not is_blacklisted(fb["topic"], category=fb["category"]):
                     filtered.append(fb)
@@ -155,8 +155,8 @@ class UniversalTrendEngine:
                                 "velocity": "HIGH",
                                 "source_signal": "Google Trends",
                             })
-        except Exception as e:
-            logger.debug(f"Google Trends RSS skipped ({e})")
+        except httpx.RequestError as e:
+            logger.debug(f"Google Trends network error ({e})")
         return trends
 
     def _fetch_wikipedia_trends(self) -> List[Dict[str, Any]]:
@@ -183,8 +183,8 @@ class UniversalTrendEngine:
                             "velocity": "STEADY",
                             "source_signal": f"Wikipedia OnThisDay ({year})",
                         })
-        except Exception as e:
-            logger.debug(f"Wikipedia trends skipped ({e})")
+        except httpx.RequestError as e:
+            logger.debug(f"Wikipedia network error ({e})")
         return events
 
     def _fetch_hackernews_signals(self) -> List[Dict[str, Any]]:
@@ -209,8 +209,8 @@ class UniversalTrendEngine:
                                     "velocity": "RISING",
                                     "source_signal": "HackerNews",
                                 })
-        except Exception as e:
-            logger.debug(f"HackerNews signals skipped ({e})")
+        except httpx.RequestError as e:
+            logger.debug(f"HackerNews network error ({e})")
         return signals
 
     def _get_calendar_milestones(self) -> List[Dict[str, Any]]:
@@ -258,38 +258,43 @@ class UniversalTrendEngine:
             return "animals"
         return "news"
 
-    def _get_universal_fallback_bank(self) -> List[Dict[str, Any]]:
-        """Multi-category universal topic repository ensuring rich options across niches."""
-        return [
-            # News / Unusual
-            {"topic": "The City Where Cats Legally Outnumber Humans", "category": "geography", "premise": "On Aoshima Island, felines reign supreme with a 6-to-1 ratio.", "trend_type": "EVERGREEN", "velocity": "STEADY", "source_signal": "Global Geography"},
-            # Sports
-            {"topic": "The 100-Meter Sprint Record That Scientists Say Is Physically Impossible to Beat", "category": "sports", "premise": "Biomechanics calculations show human tendons reach fracture limit at 9.27s.", "trend_type": "EVERGREEN", "velocity": "HIGH", "source_signal": "Sports Biomechanics"},
-            # Entertainment
-            {"topic": "The Bizarre Sound Effect Used In Literally 400 Famous Movies", "category": "entertainment", "premise": "The legendary Wilhelm Scream origin and why Hollywood sound designers refuse to retire it.", "trend_type": "EVERGREEN", "velocity": "STEADY", "source_signal": "Cinema Archives"},
-            # Humor
-            {"topic": "The Most Unsuccessful Bank Robbery in Recorded History", "category": "humor", "premise": "A thief who entered through an automatic exit door and locked himself inside.", "trend_type": "EVERGREEN", "velocity": "HIGH", "source_signal": "Historical Satire"},
-            # Cartoons / Animation
-            {"topic": "Byte & Sam: What Happens When an AI Cleans Your Room", "category": "cartoons", "premise": "Byte reorganizes the apartment by atomic weight, confusing Sam completely.", "trend_type": "EVERGREEN", "velocity": "HIGH", "source_signal": "Original Cartoon Engine"},
-            # Science
-            {"topic": "Why Boiling Water Poured Into Extreme Cold Freezes Faster Than Cold Water", "category": "science", "premise": "The Mpemba Effect: how hydrogen bonds defy standard thermodynamics.", "trend_type": "EVERGREEN", "velocity": "RISING", "source_signal": "Physical Chemistry"},
-            # History
-            {"topic": "The 335-Year War With Zero Casualties", "category": "history", "premise": "The bloodless conflict between the Netherlands and the Isles of Scilly forgotten for over 3 centuries.", "trend_type": "EVERGREEN", "velocity": "STEADY", "source_signal": "Historical Curiosities"},
-            # Technology
-            {"topic": "Why Modern Submarines Still Use Xbox Controllers to Steer Periscopes", "category": "technology", "premise": "Military engineers replaced $38,000 joysticks with $30 gamepads for superior ergonomic speed.", "trend_type": "EVERGREEN", "velocity": "HIGH", "source_signal": "Military Tech"},
-            # Gaming
-            {"topic": "The Unbeatable Level in Mario That Took Supercomputers 14 Years to Solve", "category": "gaming", "premise": "Computational complexity theory proves Super Mario Bros is mathematically NP-hard.", "trend_type": "EVERGREEN", "velocity": "STEADY", "source_signal": "Game Theory"},
-            # Animals
-            {"topic": "The Bird That Literally Impales Its Prey on Barbed Wire Like a Butcher", "category": "animals", "premise": "The Loggerhead Shrike uses environmental thorns to store food for later.", "trend_type": "EVERGREEN", "velocity": "STEADY", "source_signal": "Evolutionary Biology"},
-            # Mystery
-            {"topic": "The Mysterious Humming Sound in Taos That Driven Residents Crazy", "category": "mystery", "premise": "The Taos Hum: a persistent low-frequency drone heard by only 2% of the population.", "trend_type": "EVERGREEN", "velocity": "HIGH", "source_signal": "Acoustic Phenomena"},
-            # Food
-            {"topic": "Why McDonald's Ice Cream Machines Are Literally Designed to Break", "category": "food", "premise": "The complex automated 4-hour heat pasteurization cycle and right-to-repair battle.", "trend_type": "TRENDING", "velocity": "RISING", "source_signal": "Food Engineering"},
-            # Space
-            {"topic": "Why Astronauts Return From Space Two Inches Taller", "category": "space", "premise": "Zero gravity decompresses spinal discs, but gravity violently snaps them back upon return.", "trend_type": "EVERGREEN", "velocity": "HIGH", "source_signal": "Aerospace Medicine"},
-            # Original Fiction
-            {"topic": "What If Gravity Turned Off For Exactly 5 Seconds Worldwide?", "category": "original fiction", "premise": "Atmospheric pressure, unbolted vehicles, and orbital mechanics in 5 chaotic seconds.", "trend_type": "EVERGREEN", "velocity": "HIGH", "source_signal": "Scientific Fiction"},
-        ]
+    def _generate_dynamic_fallback_topics(self, count: int) -> List[Dict[str, Any]]:
+        """Uses Gemini API to hallucinate brand new, unique topics when internet feeds are slow."""
+        from backend.services.llm_service import llm_service
+        
+        prompt = f"""
+        You are a YouTube Shorts trend researcher. I need {count} completely unique, highly engaging video ideas.
+        Do NOT repeat standard facts. Pick obscure, bizarre, or mind-blowing topics across categories like science, sports, gaming, history, and humor.
+        
+        Return ONLY valid JSON matching this schema:
+        {{
+            "topics": [
+                {{
+                    "topic": "Catchy Title",
+                    "category": "science|sports|gaming|history|humor|mystery",
+                    "premise": "1 sentence explaining the bizarre fact or story",
+                    "trend_type": "EVERGREEN",
+                    "velocity": "STEADY",
+                    "source_signal": "AI Brainstorm"
+                }}
+            ]
+        }}
+        """
+        try:
+            logger.info(f"Generating {count} dynamic fallback topics using Gemini API...")
+            res = llm_service.generate(
+                prompt=prompt,
+                json_mode=True,
+                provider_override="gemini"
+            )
+            parsed = llm_service.parse_json_safely(res)
+            if parsed and "topics" in parsed:
+                return parsed["topics"]
+        except Exception as e:
+            logger.error(f"Failed to generate dynamic topics: {e}")
+            
+        # Absolute safety net if Gemini is down or errors out
+        return [{"topic": f"The Unbelievable Physics of Phenomenon {random.randint(1000, 9999)}", "category": "science", "premise": "A rare physical anomaly.", "trend_type": "EVERGREEN", "velocity": "STEADY", "source_signal": "Safety Net"}]
 
 
 TrendIntelligenceEngine = UniversalTrendEngine

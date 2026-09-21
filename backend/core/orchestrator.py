@@ -49,6 +49,7 @@ from backend.creative.viewer_simulator import ViewerSimulatorAgent
 from backend.creative.cartoon_engine import cartoon_engine, CharacterPose
 from backend.learning.content_brain import content_brain
 from backend.learning.daily_review import daily_review_agent
+from backend.creative.pipelines import pipeline_registry
 from backend.agents import (
     topic_research_agent,
     fact_checker_agent,
@@ -79,6 +80,7 @@ class AgentOrchestrator:
         category: Optional[str] = None,
         auto_publish: Optional[bool] = None,
         project_id: Optional[str] = None,
+        video_format: str = "short",
     ) -> ProjectModel:
         """
         Execute full autonomous end-to-end production of a YouTube Short.
@@ -197,6 +199,7 @@ class AgentOrchestrator:
                 topic=chosen_topic,
                 category=chosen_category,
                 candidate_characters=characters,
+                video_format=video_format,
             )
             proj_logger.info(
                 f"Creative Director: Format={direction.format.value} | "
@@ -340,79 +343,30 @@ class AgentOrchestrator:
             update_project_state(pid, ProjectState.VOICE_READY, duration_sec=audio_duration)
 
             # -------------------------------------------------------------
-            # 9. VISUAL GENERATION (Procedural Cartoon Engine or Public Media)
+            # 9. VISUAL GENERATION (Pluggable Render Pipelines)
             # -------------------------------------------------------------
             update_project_state(pid, ProjectState.VISUALS_COLLECTING)
-            visuals_dir = project_dir / "visuals"
-            visuals_dir.mkdir(parents=True, exist_ok=True)
-            assets: List[VisualAsset] = []
 
             # Determine best visual aesthetic style
             aesthetic_style = content_brain.select_aesthetic_style(chosen_category)
-            proj_logger.info(f"Selected Visual Aesthetic: '{aesthetic_style}'")
+            
+            # Dynamically fetch the pipeline registered for this visual treatment
+            pipeline = pipeline_registry.get_pipeline(direction.visual_treatment)
+            proj_logger.info(f"Rendering visuals using {pipeline.__class__.__name__} for treatment '{direction.visual_treatment.value}' (Aesthetic: '{aesthetic_style}')")
 
-            # Check if Cartoon Engine should render original character artwork
-            is_cartoon_treatment = (
-                direction.visual_treatment == VisualTreatment.CARTOON
-                or direction.format == ShortsFormat.MINI_CARTOON
-                or chosen_category.lower() in ["cartoon", "original fiction"]
-            )
-
-            if is_cartoon_treatment:
-                proj_logger.info(f"Rendering procedural 9:16 cartoon scenes with character '{direction.character_assigned}'...")
-                
-                task_id = job_queue.wait_for_resources(pid, "CARTOON_ENGINE", ram_estimate_mb=800.0)
-                
-                char_name = direction.character_assigned or "Byte"
-                poses = [
-                    CharacterPose.CONFIDENT,
-                    CharacterPose.SKEPTICAL,
-                    CharacterPose.THINKING,
-                    CharacterPose.SHOCKED,
-                    CharacterPose.CELEBRATING,
-                ]
-
-                for idx, sc in enumerate(script.scenes):
-                    asset_id = f"asset_{idx+1:03d}"
-                    target_file = visuals_dir / f"{asset_id}.jpg"
-                    pose = poses[idx % len(poses)]
-                    theme = "comedy" if direction.humor_suitability > 60 else "space"
-
-                    cartoon_engine.render_scene(
-                        character_name=char_name,
-                        pose=pose,
-                        caption_title=f"BEAT {idx+1}: {chosen_category.upper()}",
-                        dialogue=sc.narration[:80] + ("..." if len(sc.narration) > 80 else ""),
-                        output_path=target_file,
-                        theme=theme,
-                    )
-
-                    assets.append(
-                        VisualAsset(
-                            asset_id=asset_id,
-                            file_path=str(target_file),
-                            source_url="local://procedural/cartoon_engine",
-                            source_name="Procedural Cartoon Engine",
-                            license="Original Copyright Free Channel Asset",
-                            creator="Byte & Sam Universe",
-                            attribution_required=False,
-                            is_procedural=True,
-                        )
-                    )
+            # Execute pipeline
+            task_id = job_queue.wait_for_resources(pid, f"RENDER_{direction.visual_treatment.value}", ram_estimate_mb=500.0)
+            try:
+                assets = pipeline.render_assets(
+                    project_id=pid,
+                    script=script,
+                    project_dir=project_dir,
+                    direction=direction,
+                    topic=chosen_topic,
+                    aesthetic_style=aesthetic_style,
+                )
+            finally:
                 job_queue.complete_job(task_id)
-            else:
-                task_id = job_queue.wait_for_resources(pid, "VISUAL_SEARCH", ram_estimate_mb=100.0)
-                try:
-                    # Standard visual asset acquisition
-                    assets = visual_agent.collect_visuals(
-                        project_id=pid,
-                        topic=chosen_topic,
-                        script=script,
-                        project_dir=project_dir,
-                        aesthetic_style=aesthetic_style,
-                    )
-                finally:
-                    job_queue.complete_job(task_id)
 
             update_project_state(pid, ProjectState.VISUALS_READY)
 
@@ -564,9 +518,13 @@ class AgentOrchestrator:
                 proj_logger.info(f"Short successfully produced & passed Quality Control! (Score: {qc_report.quality_score}/100)")
 
                 if publish_mode:
-                    proj_logger.info("Auto-publish enabled, publishing to YouTube...")
+                    proj_logger.info("Auto-publish enabled, scheduling video on YouTube...")
                     current_project = get_project(pid) or project
-                    publisher_agent.publish_short(current_project, metadata)
+                    
+                    from backend.services.scheduler_service import scheduler_service
+                    publish_time = scheduler_service.calculate_next_slot(direction.format.value)
+                    
+                    publisher_agent.publish_short(current_project, metadata, publish_at=publish_time)
                 else:
                     proj_logger.info("Auto-publish disabled. Video awaiting approval in Studio dashboard.")
                     update_project_state(pid, ProjectState.APPROVED)
