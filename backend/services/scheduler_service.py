@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional
-from backend.core.database import get_db_connection
+from backend.core.database import get_db_cursor
 from backend.core.logging import logger
 
 class SchedulerService:
@@ -16,15 +16,13 @@ class SchedulerService:
 
     def _get_latest_scheduled_time(self, is_short: bool) -> Optional[datetime]:
         """Finds the latest publishAt time currently scheduled in the database."""
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        # We assume scheduled videos are tracked somewhere, or we just rely on state.
-        # But for now, we'll just check what the latest Project publish_at is.
-        # Since we don't have a publish_at column in our Projects table, we will
-        # calculate slots strictly sequentially starting from TODAY.
-        # Note: A real AutoSocial integration would query the DB for the last scheduled time.
-        pass
+        with get_db_cursor() as cursor:
+            # We assume scheduled videos are tracked somewhere, or we just rely on state.
+            # But for now, we'll just check what the latest Project publish_at is.
+            # Since we don't have a publish_at column in our Projects table, we will
+            # calculate slots strictly sequentially starting from TODAY.
+            # Note: A real AutoSocial integration would query the DB for the last scheduled time.
+            pass
 
     def calculate_next_slot(self, video_format: str) -> str:
         """

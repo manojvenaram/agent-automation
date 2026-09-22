@@ -22,5 +22,13 @@ To ensure maximum viewer retention (TikTok/Shorts style):
 ## 4. CI/CD & Deployment Fixes
 - **GitHub Actions Compatibility:** Discovered that the Ubuntu cloud runners would fail to launch the new `browser-use` agent because the Chromium binaries were missing. Updated `.github/workflows/daily_shorts.yml` and `.github/workflows/agent_cron.yml` to run `playwright install --with-deps chromium` before executing the agent, guaranteeing flawless automation in the cloud.
 
+## 5. Automation-Ready Video Pipelines (Sept 22, 2026)
+- **Skeletal Stickman Engine:** Created a completely Python-native procedural animation engine (`stickman_pipeline.py`) that uses `Pillow` to generate frames (bobbing heads, talking mouths, typewriter text) and stitches them natively into `.mp4` files via FFmpeg.
+- **Manim Educational Engine:** Built a `manim_pipeline.py` script that generates clean, 3Blue1Brown-style vector animations using the Manim CLI. 
+- **Compositing Logic:** Re-engineered `ffmpeg_service.py` to seamlessly handle both static `.jpg` assets (applying Ken Burns) and actual `.mp4` video clips (looping/scaling them to the voiceover).
+- **HuggingFace FLUX Image Generation:** Upgraded the procedural image generation in `asset_service.py` from Pollinations to `FLUX.1-schnell` via the HuggingFace Inference API, producing immensely higher quality assets. Also added robust environment variable loading using `python-dotenv` in `config.py`.
+- **Orchestrator Control Fix:** Fixed a bug in `orchestrator.py` where providing an explicit `--topic` argument was ignored because the system defaulted to `AUTONOMOUS` mode. Now, explicit prompts instantly override the trend scout.
+- **GitHub Actions Update:** Updated `generate-video.yml` with dependencies (`libcairo2-dev`, `libpango1.0-dev`), added the `HF_API_KEY` secret, and modified the matrix run steps to inject the desired `VisualTreatment` style directly into the `--topic` flag.
+
 ## Current State
 The pipeline is fully autonomous, extremely resilient, and capable of rendering highly engaging, retention-optimized videos with zero human input. All code is pushed and synced with GitHub.

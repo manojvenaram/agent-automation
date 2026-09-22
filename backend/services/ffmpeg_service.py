@@ -216,6 +216,50 @@ class FFmpegService:
 
         return output_path
 
+    def process_video_scene(
+        self,
+        video_path: str,
+        output_path: str,
+        duration: float,
+    ) -> str:
+        """
+        Takes an input video, scales/crops it to 1080x1920, and loops or trims it to the target duration.
+        """
+        out_dir = Path(output_path).parent
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        w = settings.video_width
+        h = settings.video_height
+
+        # Loop the video if it's shorter than duration, then trim to duration
+        # We use stream_loop -1 to loop infinitely, then -t to cut it at the exact duration.
+        # We also scale and crop to 9:16 to ensure consistency.
+        vf = f"scale={w}:{h}:force_original_aspect_ratio=increase,crop={w}:{h},format=yuv420p"
+
+        args = [
+            "-y",
+            "-stream_loop", "-1",
+            "-i", video_path,
+            "-vf", vf,
+            "-t", f"{duration:.3f}",
+            "-c:v", "libx264",
+            "-crf", "22",
+            "-pix_fmt", "yuv420p",
+        ]
+        
+        if settings.render_mode == "low_resource":
+            args.extend(["-preset", "ultrafast", "-threads", "1"])
+        else:
+            args.extend(["-preset", "veryfast"])
+            
+        args.append(output_path)
+
+        ret, stdout, stderr = self.run_command(args, timeout=180)
+        if ret != 0:
+            raise RuntimeError(f"Failed to process video scene {video_path}: {stderr}")
+
+        return output_path
+
     def concatenate_scenes(
         self,
         scene_video_paths: List[str],

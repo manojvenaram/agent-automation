@@ -111,7 +111,8 @@ class AgentOrchestrator:
             # -------------------------------------------------------------
             # 1. AUTONOMOUS INTELLIGENCE & OPPORTUNITY DISCOVERY
             # -------------------------------------------------------------
-            is_autonomous = (topic_input is None or settings.content_mode.upper() == "AUTONOMOUS")
+            # If a topic is explicitly provided, skip autonomous discovery
+            is_autonomous = not bool(topic_input)
 
             if is_autonomous:
                 update_project_state(pid, ProjectState.IDEA)
@@ -189,6 +190,7 @@ class AgentOrchestrator:
 
             project.title = chosen_topic
             project.category = chosen_category
+            update_project_state(pid, ProjectState.IDEA, title=chosen_topic, category=chosen_category)
             proj_logger.info(f"Master Decision Engine Approved Topic: '{chosen_topic}' (Category: {chosen_category}, Score: {opportunity_score})")
 
             # -------------------------------------------------------------

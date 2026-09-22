@@ -428,6 +428,8 @@ def update_project_state(
     quality_score: Optional[int] = None,
     error_message: Optional[str] = None,
     youtube_url: Optional[str] = None,
+    title: Optional[str] = None,
+    category: Optional[str] = None,
 ) -> None:
     now = datetime.utcnow().isoformat()
     with get_db_cursor() as cur:
@@ -440,6 +442,8 @@ def update_project_state(
                 quality_score = COALESCE(?, quality_score),
                 error_message = ?,
                 youtube_url = COALESCE(?, youtube_url),
+                title = COALESCE(?, title),
+                category = COALESCE(?, category),
                 updated_at = ?
             WHERE id = ?
             """,
@@ -450,6 +454,8 @@ def update_project_state(
                 quality_score,
                 error_message,
                 youtube_url,
+                title,
+                category,
                 now,
                 project_id,
             ),

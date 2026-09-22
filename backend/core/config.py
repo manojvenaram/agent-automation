@@ -39,10 +39,11 @@ class AppConfig(BaseModel):
     port: int = Field(default=8000)
     debug: bool = Field(default=False)
 
-    # Local AI / LLM (Ollama / Gemini / Groq)
+    # AI / LLM (Ollama / Gemini / Groq / HuggingFace)
     llm_provider: str = Field(default="groq")
     gemini_api_key: str = Field(default="")
     groq_api_key: str = Field(default="")
+    hf_api_key: str = Field(default="")
     groq_model: str = Field(default="llama-3.1-8b-instant")
     ollama_base_url: str = Field(default="http://localhost:11434")
     ollama_model: str = Field(default="qwen2.5:3b")
@@ -162,6 +163,9 @@ class AppConfig(BaseModel):
 
 def load_config() -> AppConfig:
     """Load configuration with environment variable overrides."""
+    from dotenv import load_dotenv
+    load_dotenv(BASE_DIR / ".env")
+    
     config_dict = {}
     
     # Check environment variables
@@ -175,6 +179,7 @@ def load_config() -> AppConfig:
         "LLM_PROVIDER": "llm_provider",
         "GEMINI_API_KEY": "gemini_api_key",
         "GROQ_API_KEY": "groq_api_key",
+        "HF_API_KEY": "hf_api_key",
         "GROQ_MODEL": "groq_model",
         "OLLAMA_BASE_URL": "ollama_base_url",
         "OLLAMA_MODEL": "ollama_model",

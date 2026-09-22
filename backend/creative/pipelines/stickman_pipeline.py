@@ -1,5 +1,7 @@
 import math
 import random
+import os
+import shutil
 from typing import List, Tuple
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
@@ -9,16 +11,20 @@ from backend.creative.creative_director import CreativeDirection
 from backend.creative.pipelines.base import BaseRenderPipeline
 from backend.core.logging import logger
 from backend.creative.cartoon_engine import CharacterPose
+from backend.services.ffmpeg_service import ffmpeg_service
+from backend.core.config import settings
 
 class StickmanPipeline(BaseRenderPipeline):
     """
     Procedurally renders Stickman animations with a hand-drawn whiteboard aesthetic.
+    Generates actual animated MP4 scenes.
     """
     def __init__(self):
-        self.width = 1080
-        self.height = 1920
+        self.width = settings.video_width
+        self.height = settings.video_height
         self.bg_color = (250, 250, 250) # Off-white whiteboard
         self.pen_color = (15, 15, 15)   # Almost black dry-erase marker
+        self.fps = settings.video_fps
 
     def _get_font(self, size: int) -> ImageFont.ImageFont:
         font_paths = [
@@ -36,8 +42,7 @@ class StickmanPipeline(BaseRenderPipeline):
                     pass
         return ImageFont.load_default()
 
-    def _draw_wobbly_line(self, draw: ImageDraw.ImageDraw, pt1: Tuple[int, int], pt2: Tuple[int, int], width: int = 8, wobble_amount: int = 4):
-        """Draws a line broken into segments with random offsets to simulate a hand-drawn wobbly line."""
+    def _draw_wobbly_line(self, draw: ImageDraw.ImageDraw, pt1: Tuple[float, float], pt2: Tuple[float, float], width: int = 8, wobble_amount: int = 4):
         x1, y1 = pt1
         x2, y2 = pt2
         length = math.hypot(x2 - x1, y2 - y1)
@@ -51,28 +56,22 @@ class StickmanPipeline(BaseRenderPipeline):
             t = i / segments
             cx = x1 + (x2 - x1) * t
             cy = y1 + (y2 - y1) * t
-            # Add random wobble perpendicular to the line
             ox = random.randint(-wobble_amount, wobble_amount)
             oy = random.randint(-wobble_amount, wobble_amount)
             pts.append((int(cx + ox), int(cy + oy)))
             
         pts.append((x2, y2))
         
-        # Draw the segmented line twice for a sketch effect
         draw.line(pts, fill=self.pen_color, width=width, joint="curve")
-        
-        # Draw a slightly thinner, offset line for the "dry erase" overlapping stroke look
         pts2 = [(p[0] + random.randint(-1, 1), p[1] + random.randint(-1, 1)) for p in pts]
         draw.line(pts2, fill=(40, 40, 40, 150), width=max(1, width - 2), joint="curve")
 
-    def _draw_wobbly_circle(self, draw: ImageDraw.ImageDraw, center: Tuple[int, int], radius: int, width: int = 8):
-        """Draws a sketchy, imperfect circle."""
+    def _draw_wobbly_circle(self, draw: ImageDraw.ImageDraw, center: Tuple[float, float], radius: float, width: int = 8):
         cx, cy = center
         segments = 36
         pts = []
-        for i in range(segments + 2): # Overlap slightly
+        for i in range(segments + 2):
             angle = (i * 2 * math.pi) / segments
-            # Add a slight warp to the radius for imperfection
             r = radius + random.randint(-3, 3)
             x = cx + int(r * math.cos(angle))
             y = cy + int(r * math.sin(angle))
@@ -80,83 +79,81 @@ class StickmanPipeline(BaseRenderPipeline):
             
         draw.line(pts, fill=self.pen_color, width=width, joint="curve")
 
-    def _draw_stickman(self, draw: ImageDraw.ImageDraw, cx: int, cy: int, pose: CharacterPose):
-        """Draws a stickman with a specific pose."""
+    def _draw_stickman(self, draw: ImageDraw.ImageDraw, cx: float, cy: float, pose: CharacterPose, frame_idx: int):
+        # Bobbing animation
+        bob = math.sin(frame_idx * 0.2) * 15
+        cy += bob
+        
         head_radius = 80
         head_center = (cx, cy - 250)
         
-        # Head
         self._draw_wobbly_circle(draw, head_center, head_radius)
         
-        # Spine
         spine_top = (cx, cy - 170)
         spine_bottom = (cx, cy + 100)
         
-        # Eyes
+        # Talking mouth animation
+        is_talking = frame_idx % 10 < 5
+        mouth_offset = 5 if is_talking else 0
+
         if pose == CharacterPose.SHOCKED:
             self._draw_wobbly_circle(draw, (cx - 30, cy - 260), 15, width=4)
             self._draw_wobbly_circle(draw, (cx + 30, cy - 260), 15, width=4)
-            # Open mouth
-            self._draw_wobbly_circle(draw, (cx, cy - 210), 20, width=5)
+            self._draw_wobbly_circle(draw, (cx, cy - 210 + mouth_offset), 20 + mouth_offset, width=5)
         elif pose == CharacterPose.SKEPTICAL:
-            # Squinted eyes
             self._draw_wobbly_line(draw, (cx - 45, cy - 260), (cx - 15, cy - 255), width=6)
             self._draw_wobbly_line(draw, (cx + 15, cy - 265), (cx + 45, cy - 255), width=6)
-            # Straight mouth
-            self._draw_wobbly_line(draw, (cx - 20, cy - 210), (cx + 20, cy - 210), width=5)
+            self._draw_wobbly_line(draw, (cx - 20, cy - 210), (cx + 20, cy - 210 + mouth_offset), width=5)
         else:
-            # Normal dot eyes
             draw.ellipse([cx - 35, cy - 265, cx - 15, cy - 245], fill=self.pen_color)
             draw.ellipse([cx + 15, cy - 265, cx + 35, cy - 245], fill=self.pen_color)
             if pose == CharacterPose.CELEBRATING or pose == CharacterPose.CONFIDENT:
-                # Smile
-                draw.arc([cx - 30, cy - 230, cx + 30, cy - 190], start=0, end=180, fill=self.pen_color, width=6)
+                draw.arc([cx - 30, cy - 230, cx + 30, cy - 190 + mouth_offset], start=0, end=180, fill=self.pen_color, width=6)
             else:
-                # Neutral mouth
-                self._draw_wobbly_line(draw, (cx - 15, cy - 215), (cx + 15, cy - 215), width=5)
+                self._draw_wobbly_line(draw, (cx - 15, cy - 215), (cx + 15, cy - 215 + mouth_offset), width=5)
 
-        # Draw spine
         self._draw_wobbly_line(draw, spine_top, spine_bottom, width=12)
         
-        # Legs
         leg_l = (cx - 80, cy + 300)
         leg_r = (cx + 80, cy + 300)
         self._draw_wobbly_line(draw, spine_bottom, leg_l, width=12)
         self._draw_wobbly_line(draw, spine_bottom, leg_r, width=12)
         
-        # Arms
         shoulder = (cx, cy - 120)
+        
+        # Arm swaying animation
+        sway = math.sin(frame_idx * 0.15) * 20
+        
         if pose == CharacterPose.CELEBRATING:
-            # Arms up
-            self._draw_wobbly_line(draw, shoulder, (cx - 120, cy - 250), width=10)
-            self._draw_wobbly_line(draw, shoulder, (cx + 120, cy - 250), width=10)
+            self._draw_wobbly_line(draw, shoulder, (cx - 120 + sway, cy - 250), width=10)
+            self._draw_wobbly_line(draw, shoulder, (cx + 120 + sway, cy - 250), width=10)
         elif pose == CharacterPose.THINKING:
-            # One hand to chin
-            self._draw_wobbly_line(draw, shoulder, (cx - 100, cy - 50), width=10) # Left arm resting down
-            # Right arm bent to chin
+            self._draw_wobbly_line(draw, shoulder, (cx - 100, cy - 50 + sway), width=10)
             elbow = (cx + 90, cy - 50)
             self._draw_wobbly_line(draw, shoulder, elbow, width=10)
-            self._draw_wobbly_line(draw, elbow, (cx + 40, cy - 180), width=10) # Hand near chin
-        else: # CONFIDENT / SKEPTICAL / DEFAULT
-            # Hands on hips
-            elbow_l = (cx - 100, cy - 20)
-            elbow_r = (cx + 100, cy - 20)
+            self._draw_wobbly_line(draw, elbow, (cx + 40, cy - 180 + (sway/2)), width=10)
+        else:
+            elbow_l = (cx - 100, cy - 20 + sway)
+            elbow_r = (cx + 100, cy - 20 - sway)
             hip_l = (cx - 30, cy + 50)
             hip_r = (cx + 30, cy + 50)
             
             self._draw_wobbly_line(draw, shoulder, elbow_l, width=10)
             self._draw_wobbly_line(draw, elbow_l, hip_l, width=10)
-            
             self._draw_wobbly_line(draw, shoulder, elbow_r, width=10)
             self._draw_wobbly_line(draw, elbow_r, hip_r, width=10)
 
-    def _draw_handwritten_text(self, draw: ImageDraw.ImageDraw, text: str, cx: int, cy: int, max_width: int):
-        """Draws handwritten text with a slight rotation to look natural."""
+    def _draw_handwritten_text(self, draw: ImageDraw.ImageDraw, text: str, cx: float, cy: float, max_width: int, progress: float):
         font = self._get_font(50)
         words = text.split()
+        
+        # Typewriter effect based on progress
+        words_to_show = max(1, int(len(words) * progress))
+        display_words = words[:words_to_show]
+        
         lines = []
         current_line = []
-        for w in words:
+        for w in display_words:
             current_line.append(w)
             test_line = " ".join(current_line)
             bbox = draw.textbbox((0, 0), test_line, font=font)
@@ -177,15 +174,7 @@ class StickmanPipeline(BaseRenderPipeline):
             line_w = bbox[2] - bbox[0]
             tx = cx - (line_w // 2)
             
-            # Slight random tilt for handwriting
-            temp_img = Image.new("RGBA", (line_w + 20, line_height + 20), (255, 255, 255, 0))
-            temp_draw = ImageDraw.Draw(temp_img)
-            temp_draw.text((10, 10), line, fill=self.pen_color, font=font)
-            
-            angle = random.uniform(-1.5, 1.5)
-            rotated = temp_img.rotate(angle, resample=Image.BICUBIC, expand=1)
-            
-            draw._image.paste(rotated, (tx - 10, ty - 10), rotated)
+            draw.text((tx, ty), line, fill=self.pen_color, font=font)
             ty += line_height
 
     def render_assets(
@@ -212,36 +201,68 @@ class StickmanPipeline(BaseRenderPipeline):
 
         for idx, sc in enumerate(script.scenes):
             asset_id = f"asset_{idx+1:03d}"
-            target_file = visuals_dir / f"{asset_id}.jpg"
+            target_mp4 = visuals_dir / f"{asset_id}.mp4"
             pose = poses[idx % len(poses)]
             
-            # Create a blank whiteboard canvas
-            img = Image.new("RGB", (self.width, self.height), self.bg_color)
-            draw = ImageDraw.Draw(img)
+            duration_sec = sc.duration_est
+            if duration_sec <= 0:
+                duration_sec = 3.0
+                
+            total_frames = int(duration_sec * self.fps)
+            frames_dir = visuals_dir / f"frames_{asset_id}"
+            frames_dir.mkdir(parents=True, exist_ok=True)
 
-            # Draw some faint whiteboard smudges/noise for realism
-            for _ in range(5):
-                sx = random.randint(0, self.width)
-                sy = random.randint(0, self.height)
-                draw.ellipse([sx, sy, sx + 200, sy + 200], fill=(240, 240, 240))
+            logger.info(f"Rendering {total_frames} animated stickman frames for scene {idx+1}...")
+            
+            # Render frames
+            for frame_idx in range(total_frames):
+                img = Image.new("RGB", (self.width, self.height), self.bg_color)
+                draw = ImageDraw.Draw(img)
 
-            # Draw the stickman at the bottom center
-            self._draw_stickman(draw, self.width // 2, 1300, pose)
+                # Draw stickman with animation frame
+                self._draw_stickman(draw, self.width // 2, 1300, pose, frame_idx)
 
-            # Draw the narrative text above the stickman
-            text_to_draw = sc.narration[:100] + ("..." if len(sc.narration) > 100 else "")
-            self._draw_handwritten_text(draw, text_to_draw, self.width // 2, 500, max_width=900)
+                # Draw typewriter text
+                progress = min(1.0, (frame_idx / (total_frames * 0.7))) # Text finishes at 70% of scene
+                text_to_draw = sc.narration
+                self._draw_handwritten_text(draw, text_to_draw, self.width // 2, 500, 900, progress)
 
-            # Save the frame
-            img.save(str(target_file), quality=90)
-            logger.info(f"Rendered Stickman scene {idx+1} -> {target_file}")
+                frame_path = frames_dir / f"frame_{frame_idx:04d}.png"
+                img.save(str(frame_path), quality=80)
+
+            # Compile into MP4
+            logger.info(f"Compiling frames to {target_mp4} using FFmpeg...")
+            args = [
+                "-y",
+                "-framerate", str(self.fps),
+                "-i", str(frames_dir / "frame_%04d.png"),
+                "-c:v", "libx264",
+                "-crf", "22",
+                "-pix_fmt", "yuv420p",
+            ]
+            
+            if settings.render_mode == "low_resource":
+                args.extend(["-preset", "ultrafast", "-threads", "1"])
+            else:
+                args.extend(["-preset", "veryfast"])
+                
+            args.append(str(target_mp4))
+            
+            ret, _, err = ffmpeg_service.run_command(args, timeout=300)
+            if ret != 0:
+                raise RuntimeError(f"Failed to compile stickman frames into video: {err}")
+
+            # Clean up frames to save disk space
+            shutil.rmtree(frames_dir, ignore_errors=True)
+
+            logger.info(f"Rendered Stickman animated scene {idx+1} -> {target_mp4}")
 
             assets.append(
                 VisualAsset(
                     asset_id=asset_id,
-                    file_path=str(target_file),
+                    file_path=str(target_mp4),
                     source_url="local://procedural/stickman_engine",
-                    source_name="Procedural Stickman Engine",
+                    source_name="Procedural Stickman Engine (Animated)",
                     license="Original Copyright Free Channel Asset",
                     creator="Stickman Director",
                     attribution_required=False,

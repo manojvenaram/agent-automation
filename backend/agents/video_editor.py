@@ -46,12 +46,19 @@ class VideoEditorAgent:
             direction = "in" if idx % 2 == 0 else "out"
             
             logger.info(f"Rendering scene {idx+1}/{num_scenes} ({scene_duration:.2f}s, zoom: {direction})...")
-            ffmpeg_service.create_still_scene_video(
-                image_path=asset.file_path,
-                output_path=scene_out,
-                duration=scene_duration,
-                zoom_direction=direction,
-            )
+            if asset.file_path.endswith('.mp4'):
+                ffmpeg_service.process_video_scene(
+                    video_path=asset.file_path,
+                    output_path=scene_out,
+                    duration=scene_duration,
+                )
+            else:
+                ffmpeg_service.create_still_scene_video(
+                    image_path=asset.file_path,
+                    output_path=scene_out,
+                    duration=scene_duration,
+                    zoom_direction=direction,
+                )
             scene_video_files.append(scene_out)
 
         # Concatenate scenes

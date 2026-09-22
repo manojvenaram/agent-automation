@@ -136,11 +136,51 @@ class AssetService:
         cropped = resized.crop((left, top, left + width, top + height))
         cropped.save(output_path, quality=92)
 
+    def _generate_hf_visual(self, output_path: Path, prompt: str) -> bool:
+        """
+        Generates high-quality images using FLUX.1-schnell via HuggingFace Inference API.
+        """
+        api_key = settings.hf_api_key
+        if not api_key:
+            return False
+            
+        url = "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell"
+        headers = {"Authorization": f"Bearer {api_key}"}
+        payload = {
+            "inputs": prompt,
+            "parameters": {
+                "width": 1080,
+                "height": 1920,
+            }
+        }
+        
+        try:
+            with httpx.Client(timeout=120.0) as client:
+                logger.info(f"Generating image via HuggingFace FLUX.1-schnell...")
+                response = client.post(url, headers=headers, json=payload)
+                if response.status_code == 200:
+                    with open(output_path, "wb") as f:
+                        f.write(response.content)
+                    return True
+                else:
+                    logger.warning(f"HuggingFace API error: {response.status_code} - {response.text}")
+                    return False
+        except Exception as e:
+            logger.error(f"HuggingFace API request failed: {e}")
+            return False
+
     def _generate_ai_visual(self, output_path: Path, prompt: str) -> bool:
         """
-        Generate dynamic AI visuals via Pollinations.ai (Free, open-source stable diffusion).
-        Returns True if successful, False otherwise.
+        Generate dynamic AI visuals. Prefers HuggingFace FLUX if API key is set,
+        otherwise falls back to Pollinations.ai.
         """
+        # Try HuggingFace first if we have a key
+        if settings.hf_api_key:
+            if self._generate_hf_visual(output_path, prompt):
+                return True
+            logger.warning("HuggingFace generation failed. Falling back to Pollinations.ai...")
+
+        # Fallback to Pollinations.ai
         import urllib.parse
         encoded_prompt = urllib.parse.quote(prompt)
         url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1080&height=1920&nologo=true"

@@ -24,6 +24,7 @@ jobs:
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+      HF_API_KEY: ${{ secrets.HF_API_KEY }}
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       LLM_PROVIDER: groq
@@ -42,7 +43,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg fonts-liberation fonts-dejavu imagemagick
+          sudo apt-get install -y ffmpeg fonts-liberation fonts-dejavu imagemagick libcairo2-dev libpango1.0-dev
 
       - name: Install Python dependencies
         run: |
@@ -52,10 +53,19 @@ jobs:
 
       - name: Run Autonomous Agent
         run: |
+          TOPIC="${{ github.event.inputs.topic }}"
           if [ "${{ matrix.visual_style }}" == "stickman" ]; then
-            python app.py run-agent --category "stickman" --topic "${{ github.event.inputs.topic }}"
+            if [ -n "$TOPIC" ]; then
+              python app.py run-agent --category "science" --topic "$TOPIC (Format as Whiteboard Stickman Explainer)"
+            else
+              python app.py run-agent --category "science" --topic "A fascinating science fact explained in a Whiteboard Stickman Explainer format"
+            fi
           else
-            python app.py run-agent --category "cartoon" --topic "${{ github.event.inputs.topic }}"
+            if [ -n "$TOPIC" ]; then
+              python app.py run-agent --category "science" --topic "$TOPIC (Format as Cartoon Vector Animation)"
+            else
+              python app.py run-agent --category "science" --topic "A fascinating science fact explained in a Cartoon Vector Animation format"
+            fi
           fi
 
       - name: Upload Video Artifact
