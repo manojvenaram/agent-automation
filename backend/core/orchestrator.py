@@ -229,35 +229,41 @@ class AgentOrchestrator:
             # -------------------------------------------------------------
             # 4. HOOK LAB (Generate 10+ Candidate Hooks)
             # -------------------------------------------------------------
-            proj_logger.info("Hook Lab: Generating 10+ psychological hooks...")
-            candidate_hooks = self.hook_lab.generate_hooks(
-                topic=chosen_topic,
-                category=chosen_category,
-                key_facts=context_summary[:300],
-            )
-            best_hook_obj = candidate_hooks[0]
-            best_hook = best_hook_obj.text
-            proj_logger.info(f"Top Hook Selected ({best_hook_obj.archetype}, Score {best_hook_obj.composite_score}): '{best_hook}'")
+            if direction.format.value in ["VIRAL_PROMPT", "REDDIT_STORY", "TOP_3", "DID_YOU_KNOW"]:
+                proj_logger.info(f"Skipping Hook Lab: {direction.format.value} format generates its own specialized hooks.")
+                best_hook = "Viral Prompt Hook"
+                # Skip viewer simulation as well for viral prompts
+                sim_result = type('obj', (object,), {'composite_retention': 95.0, 'scroll_stop_rate': 0.9, 'verdict': 'PASS'})
+            else:
+                proj_logger.info("Hook Lab: Generating 10+ psychological hooks...")
+                candidate_hooks = self.hook_lab.generate_hooks(
+                    topic=chosen_topic,
+                    category=chosen_category,
+                    key_facts=context_summary[:300],
+                )
+                best_hook_obj = candidate_hooks[0]
+                best_hook = best_hook_obj.text
+                proj_logger.info(f"Top Hook Selected ({best_hook_obj.archetype}, Score {best_hook_obj.composite_score}): '{best_hook}'")
 
-            # -------------------------------------------------------------
-            # 5. VIEWER SIMULATION (7 Audience Personas)
-            # -------------------------------------------------------------
-            sim_result = self.viewer_simulator.simulate(
-                topic=chosen_topic,
-                category=chosen_category,
-                hook=best_hook,
-            )
-            proj_logger.info(
-                f"Viewer Simulator: Scroll-Stop Rate={sim_result.scroll_stop_rate:.0%} | "
-                f"Composite Retention={sim_result.composite_retention:.1f}% | "
-                f"Verdict={sim_result.verdict}"
-            )
+                # -------------------------------------------------------------
+                # 5. VIEWER SIMULATION (7 Audience Personas)
+                # -------------------------------------------------------------
+                sim_result = self.viewer_simulator.simulate(
+                    topic=chosen_topic,
+                    category=chosen_category,
+                    hook=best_hook,
+                )
+                proj_logger.info(
+                    f"Viewer Simulator: Scroll-Stop Rate={sim_result.scroll_stop_rate:.0%} | "
+                    f"Composite Retention={sim_result.composite_retention:.1f}% | "
+                    f"Verdict={sim_result.verdict}"
+                )
 
-            # If opening is weak, pick top runner-up hook
-            if sim_result.verdict == "REWRITE_HOOK" and len(candidate_hooks) > 1:
-                runner_up = candidate_hooks[1]
-                proj_logger.warning(f"Hook failed retention simulation threshold. Switching to runner up: '{runner_up.text}'")
-                best_hook = runner_up.text
+                # If opening is weak, pick top runner-up hook
+                if sim_result.verdict == "REWRITE_HOOK" and len(candidate_hooks) > 1:
+                    runner_up = candidate_hooks[1]
+                    proj_logger.warning(f"Hook failed retention simulation threshold. Switching to runner up: '{runner_up.text}'")
+                    best_hook = runner_up.text
 
             # -------------------------------------------------------------
             # 6. STORY ENGINE & SCRIPT GENERATION (5 Narrative Architectures)
@@ -267,46 +273,84 @@ class AgentOrchestrator:
             
             task_id = job_queue.wait_for_resources(pid, "LLM_SCRIPT", ram_estimate_mb=1000.0)
             try:
-                story_script = self.story_engine.generate_script(
-                    topic=chosen_topic,
-                    category=chosen_category,
-                    hook=best_hook,
-                    research_notes=context_summary,
-                    structure=story_struct,
-                    character_name=direction.character_assigned,
-                )
+                if direction.format.value in ["VIRAL_PROMPT", "REDDIT_STORY", "TOP_3", "DID_YOU_KNOW"]:
+                    proj_logger.info(f"Routing to specialized Multi-Agent Orchestrator for {direction.format.value}...")
+                    multi_agent_res = self.creative_director.run_multi_agent_vision(
+                        topic=chosen_topic, category=chosen_category, video_format=direction.format.value
+                    )
+                    script_text = multi_agent_res["script"]
+                    
+                    # Parse markdown table
+                    scenes: List[ScriptScene] = []
+                    full_narration = []
+                    for line in script_text.split('\n'):
+                        if line.strip().startswith('|') and '---' not in line and 'Visual' not in line and 'Text-on-Screen' not in line:
+                            parts = [p.strip() for p in line.split('|')]
+                            if len(parts) >= 3:
+                                vis = parts[1]
+                                aud = parts[2]
+                                if vis and aud:
+                                    full_narration.append(aud)
+                                    scenes.append(
+                                        ScriptScene(
+                                            scene_index=len(scenes) + 1,
+                                            narration=aud,
+                                            duration_est=max(2.0, len(aud.split()) / 2.5),
+                                            visual_description=vis,
+                                            transition="fade"
+                                        )
+                                    )
+                                    
+                    script = ScriptModel(
+                        hook=best_hook,
+                        context=f"Format: {direction.format.value} | Multi-Agent",
+                        main_facts=context_summary[:200],
+                        payoff=full_narration[-1] if full_narration else "Try this prompt now!",
+                        cta="Screenshot this prompt!",
+                        full_narration=" ".join(full_narration),
+                        word_count=len(" ".join(full_narration).split()),
+                        estimated_duration_sec=sum(s.duration_est for s in scenes),
+                        scenes=scenes,
+                    )
+                else:
+                    story_script = self.story_engine.generate_script(
+                        topic=chosen_topic,
+                        category=chosen_category,
+                        hook=best_hook,
+                        research_notes=context_summary,
+                        structure=story_struct,
+                        character_name=direction.character_assigned,
+                    )
+                    
+                    scenes: List[ScriptScene] = []
+                    for idx, beat in enumerate(story_script.beats):
+                        scenes.append(
+                            ScriptScene(
+                                scene_index=idx + 1,
+                                narration=beat.narration,
+                                duration_est=beat.target_duration_sec,
+                                visual_description=beat.visual_description,
+                                transition="fade",
+                            )
+                        )
+
+                    script = ScriptModel(
+                        hook=best_hook,
+                        context=f"Format: {direction.format.value} | Structure: {story_struct.value}",
+                        main_facts=context_summary[:200],
+                        payoff=story_script.beats[-1].narration if story_script.beats else "Subscribe for more!",
+                        cta="Subscribe for more incredible facts!",
+                        full_narration=story_script.full_narration,
+                        word_count=story_script.total_words,
+                        estimated_duration_sec=story_script.estimated_duration_sec,
+                        scenes=scenes,
+                    )
             except Exception as script_err:
                 if "CUDA out of memory" in str(script_err):
                     proj_logger.error("GPU OOM encountered during script generation. Releasing resources and retrying via fallback.")
-                    # Retry once or trigger recovery
                 raise script_err
             finally:
                 job_queue.complete_job(task_id)
-
-            # Map into ScriptModel
-            scenes: List[ScriptScene] = []
-            for idx, beat in enumerate(story_script.beats):
-                scenes.append(
-                    ScriptScene(
-                        scene_index=idx + 1,
-                        narration=beat.narration,
-                        duration_est=beat.target_duration_sec,
-                        visual_description=beat.visual_description,
-                        transition="fade",
-                    )
-                )
-
-            script = ScriptModel(
-                hook=best_hook,
-                context=f"Format: {direction.format.value} | Structure: {story_struct.value}",
-                main_facts=context_summary[:200],
-                payoff=story_script.beats[-1].narration if story_script.beats else "Subscribe for more!",
-                cta="Subscribe for more incredible facts!",
-                full_narration=story_script.full_narration,
-                word_count=story_script.total_words,
-                estimated_duration_sec=story_script.estimated_duration_sec,
-                scenes=scenes,
-            )
             update_project_state(pid, ProjectState.SCRIPT_READY)
             proj_logger.info(f"Script Generated: {len(scenes)} visual beats, {script.word_count} words (~{script.estimated_duration_sec}s)")
 

@@ -12,6 +12,7 @@ from backend.core.logging import logger
 from backend.core.config import settings
 from backend.services.llm_service import LLMService
 from backend.learning.content_brain import content_brain
+from backend.agents.orchestrator import MultiAgentOrchestrator
 
 
 class ShortsFormat(str, Enum):
@@ -42,6 +43,7 @@ class ShortsFormat(str, Enum):
     LONG_FORM_DOCUMENTARY = "LONG_FORM_DOCUMENTARY"
     LONG_FORM_ESSAY = "LONG_FORM_ESSAY"
     STICKMAN_EXPLAINER = "STICKMAN_EXPLAINER"
+    VIRAL_PROMPT = "VIRAL_PROMPT"
 
 
 class VisualTreatment(str, Enum):
@@ -96,6 +98,11 @@ class CreativeDirection:
 class CreativeDirectorAgent:
     def __init__(self, llm_service: Optional[LLMService] = None):
         self.ollama = llm_service or LLMService()
+        self.multi_agent = MultiAgentOrchestrator()
+
+    def run_multi_agent_vision(self, topic: str, category: str, video_format: str = "DOCUMENTARY") -> Dict[str, Any]:
+        """Runs the new multi-agent collaborative loop to determine script and vision."""
+        return self.multi_agent.run_workflow(topic, category, video_format)
 
     def calculate_humor_suitability(self, topic: str, category: str, summary: str = "") -> int:
         """
@@ -158,6 +165,14 @@ class CreativeDirectorAgent:
         if is_fiction_or_cartoon or cat == "cartoon":
             return ShortsFormat.MINI_CARTOON
 
+        # Override to Stickman if explicitly requested by topic (simple heuristic)
+        if "stickman" in lower or "whiteboard" in lower:
+            return ShortsFormat.STICKMAN_EXPLAINER
+            
+        # Strongly bias towards VIRAL_PROMPT for tech/AI topics (Must happen before low_resource override)
+        if cat in ["technology", "coding", "software"] or "prompt" in lower or "ai" in lower:
+            return ShortsFormat.VIRAL_PROMPT
+
         # In low resource mode, heavily bias toward simple formats
         if settings.render_mode == "low_resource":
             low_resource_formats = [
@@ -172,10 +187,6 @@ class CreativeDirectorAgent:
 
         # Ask Content Brain for the optimal format via Explore/Exploit
         best_format_str = content_brain.select_script_format(category)
-        
-        # Override to Stickman if explicitly requested by topic (simple heuristic)
-        if "stickman" in lower or "whiteboard" in lower:
-            return ShortsFormat.STICKMAN_EXPLAINER
             
         try:
             return ShortsFormat[best_format_str]
@@ -219,7 +230,7 @@ class CreativeDirectorAgent:
         if fmt in [ShortsFormat.REDDIT_STORY]:
             return VisualTreatment.WEB_RENDER
             
-        if fmt in [ShortsFormat.DOCUMENTARY, ShortsFormat.LONG_FORM_DOCUMENTARY, ShortsFormat.LONG_FORM_ESSAY, ShortsFormat.MYSTERY, ShortsFormat.DRAMATIC_STORY]:
+        if fmt in [ShortsFormat.DOCUMENTARY, ShortsFormat.LONG_FORM_DOCUMENTARY, ShortsFormat.LONG_FORM_ESSAY, ShortsFormat.MYSTERY, ShortsFormat.DRAMATIC_STORY, ShortsFormat.VIRAL_PROMPT]:
             return VisualTreatment.CINEMATIC
 
         return VisualTreatment.CINEMATIC # Default everything else to cinematic if it's not a cartoon/stickman
