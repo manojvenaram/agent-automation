@@ -5,19 +5,6 @@ on:
     # Runs at 18:00 UTC every day (adjust as needed)
     - cron: '0 18 * * *'
   workflow_dispatch:
-    inputs:
-      category:
-        description: 'Category (e.g., technology, science, space, humor)'
-        required: false
-        default: 'technology'
-      topic:
-        description: 'Specific topic (optional)'
-        required: false
-        default: ''
-      format:
-        description: 'Video Format (short, long, VIRAL_PROMPT, etc.)'
-        required: false
-        default: 'short'
 
 jobs:
   generate-and-publish:
