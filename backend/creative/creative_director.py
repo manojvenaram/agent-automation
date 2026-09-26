@@ -44,6 +44,7 @@ class ShortsFormat(str, Enum):
     LONG_FORM_ESSAY = "LONG_FORM_ESSAY"
     STICKMAN_EXPLAINER = "STICKMAN_EXPLAINER"
     VIRAL_PROMPT = "VIRAL_PROMPT"
+    MIXAMO_MOCAP = "MIXAMO_MOCAP"
 
 
 class VisualTreatment(str, Enum):
@@ -65,6 +66,7 @@ class VisualTreatment(str, Enum):
     WHITEBOARD_STICKMAN = "WHITEBOARD_STICKMAN"
     CINEMATIC = "CINEMATIC"
     WEB_RENDER = "WEB_RENDER"
+    MOCAP_3D = "MOCAP_3D"
 
 
 @dataclass
@@ -169,6 +171,9 @@ class CreativeDirectorAgent:
         if "stickman" in lower or "whiteboard" in lower:
             return ShortsFormat.STICKMAN_EXPLAINER
             
+        if "mocap" in lower or "3d" in lower or "mixamo" in lower or "fight" in lower:
+            return ShortsFormat.MIXAMO_MOCAP
+            
         # Strongly bias towards VIRAL_PROMPT for tech/AI topics (Must happen before low_resource override)
         if cat in ["technology", "coding", "software"] or "prompt" in lower or "ai" in lower:
             return ShortsFormat.VIRAL_PROMPT
@@ -211,6 +216,9 @@ class CreativeDirectorAgent:
             
         if fmt == ShortsFormat.STICKMAN_EXPLAINER:
             return VisualTreatment.WHITEBOARD_STICKMAN
+
+        if fmt == ShortsFormat.MIXAMO_MOCAP:
+            return VisualTreatment.MOCAP_3D
 
         if fmt in [ShortsFormat.VISUAL_EXPERIMENT, ShortsFormat.ANIMATION, ShortsFormat.SIMULATION]:
             return VisualTreatment.ANIMATION
@@ -289,6 +297,11 @@ class CreativeDirectorAgent:
             mood = "comedic"
             pacing = 140
             beat_sec = 3.0
+            struct = "HOOK_SETUP_ESCALATION_TWIST_PAYOFF"
+        elif fmt == ShortsFormat.MIXAMO_MOCAP:
+            mood = "energetic"
+            pacing = 145
+            beat_sec = 2.0
             struct = "HOOK_SETUP_ESCALATION_TWIST_PAYOFF"
         elif fmt in [ShortsFormat.MYSTERY, ShortsFormat.DRAMATIC_STORY]:
             mood = "mysterious"

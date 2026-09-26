@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        visual_style: ['cartoon', 'stickman']
+        visual_style: ['cartoon', 'stickman', 'mocap']
 
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -43,7 +43,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg fonts-liberation fonts-dejavu imagemagick libcairo2-dev libpango1.0-dev
+          sudo apt-get install -y ffmpeg fonts-liberation fonts-dejavu imagemagick libcairo2-dev libpango1.0-dev blender
 
       - name: Install Python dependencies
         run: |
@@ -59,6 +59,12 @@ jobs:
               python app.py run-agent --category "science" --topic "$TOPIC (Format as Whiteboard Stickman Explainer)"
             else
               python app.py run-agent --category "science" --topic "A fascinating science fact explained in a Whiteboard Stickman Explainer format"
+            fi
+          elif [ "${{ matrix.visual_style }}" == "mocap" ]; then
+            if [ -n "$TOPIC" ]; then
+              python app.py run-agent --category "science" --topic "$TOPIC (Format as 3D Mixamo Mocap Animation)"
+            else
+              python app.py run-agent --category "science" --topic "A fascinating science fact explained in a 3D Mixamo Mocap Animation format"
             fi
           else
             if [ -n "$TOPIC" ]; then
