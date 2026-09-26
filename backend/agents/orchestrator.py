@@ -177,14 +177,20 @@ class MultiAgentOrchestrator:
             logger.info("Starting Audio Generation...")
             audio_path = audio_engine.generate_voiceover(script_reply)
 
+            # Calculate exact duration for each clip to match the audio perfectly
+            from moviepy.editor import AudioFileClip
+            audio_clip = AudioFileClip(audio_path)
+            total_duration = audio_clip.duration
+            audio_clip.close()
+            clip_duration = total_duration / 3.0
+
             # 2. Generate Video Clips (Mocked from the shot list)
             # In a real app, you would parse the shot_reply into a list of specific prompts.
-            # Here we generate 3 clips of 3 seconds each to simulate.
-            logger.info("Starting Video B-roll Generation...")
+            logger.info(f"Starting Video B-roll Generation (Each clip: {clip_duration:.2f}s)...")
             video_clips = [
-                video_engine.generate_broll("Shot 1", duration=3),
-                video_engine.generate_broll("Shot 2", duration=3),
-                video_engine.generate_broll("Shot 3", duration=3)
+                video_engine.generate_broll("Shot 1", duration=clip_duration),
+                video_engine.generate_broll("Shot 2", duration=clip_duration),
+                video_engine.generate_broll("Shot 3", duration=clip_duration)
             ]
 
             # 3. Assemble Final Video

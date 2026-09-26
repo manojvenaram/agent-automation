@@ -3,6 +3,7 @@ import urllib.parse
 import urllib.request
 from backend.core.logging import logger
 from moviepy.editor import ImageClip
+import moviepy.video.fx.all as vfx
 
 class VideoGenerationEngine:
     """
@@ -11,45 +12,48 @@ class VideoGenerationEngine:
     def __init__(self):
         self.api_key = os.getenv("VIDEO_API_KEY")
 
-    def generate_broll(self, prompt: str, duration: int = 3) -> str:
+    def generate_broll(self, prompt: str, duration: float = 3.0) -> str:
         """
         Takes a cinematic prompt and returns a path to the generated MP4.
         Uses a free Text-to-Image API (Pollinations.ai) to generate a real AI image,
-        and converts it into a video clip.
+        and converts it into a video clip with a cinematic zoom (Ken Burns effect).
         """
         logger.info(f"Generating {duration}s video for prompt: {prompt}")
         output_dir = os.path.join(os.getcwd(), "tmp", "generated_clips")
         os.makedirs(output_dir, exist_ok=True)
         
-        # Clean up prompt for the URL
         safe_prompt = urllib.parse.quote(prompt)
-        # We request a 1080x1920 vertical image suitable for Shorts
         image_url = f"https://image.pollinations.ai/prompt/{safe_prompt}?width=1080&height=1920&nologo=true"
         
         image_path = os.path.join(output_dir, f"{hash(prompt)}.jpg")
         simulated_output_path = os.path.join(output_dir, f"{hash(prompt)}.mp4")
         
         try:
-            # 1. Download the generated AI image
             logger.info(f"Downloading AI image from {image_url}")
             urllib.request.urlretrieve(image_url, image_path)
             
-            # 2. Convert the image into a video clip
-            logger.info("Converting image to video clip...")
+            logger.info("Converting image to cinematic video clip...")
+            # Create clip and set duration
             clip = ImageClip(image_path).set_duration(duration)
-            clip.write_videofile(simulated_output_path, fps=24, logger=None)
+            
+            # Apply slow zoom-in effect (Ken Burns)
+            # Resize from 100% to 110% over the duration
+            zoom_clip = clip.resize(lambda t: 1 + 0.05 * (t / duration))
+            # Crop to original size to avoid black borders while zooming
+            final_clip = zoom_clip.crop(x_center=540, y_center=960, width=1080, height=1920)
+            
+            final_clip.write_videofile(simulated_output_path, fps=24, logger=None)
+            final_clip.close()
             clip.close()
             
-            # Clean up the temp image
             if os.path.exists(image_path):
                 os.remove(image_path)
                 
-            logger.info(f"Video generated at: {simulated_output_path}")
+            logger.info(f"Cinematic Video generated at: {simulated_output_path}")
             return simulated_output_path
             
         except Exception as e:
             logger.error(f"Failed to generate real AI video: {e}")
-            # Fallback to the solid color clip if API fails
             from moviepy.editor import ColorClip
             import random
             color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
