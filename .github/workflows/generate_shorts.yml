@@ -57,12 +57,16 @@ jobs:
           GOOGLE_CLIENT_SECRETS_B64: ${{ secrets.GOOGLE_CLIENT_SECRETS_B64 }}
           GOOGLE_TOKEN_PICKLE_B64: ${{ secrets.GOOGLE_TOKEN_PICKLE_B64 }}
         run: |
-          # If triggered manually, use the inputs. Otherwise, let it run autonomously.
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            python app.py run-agent --category "${{ github.event.inputs.category }}" --topic "${{ github.event.inputs.category }}" --format "${{ github.event.inputs.format }}" || python test_run.py
-          else
-            python app.py run-agent --category "technology" || python test_run.py
-          fi
+          # 1. Run the fully autonomous engine
+          python auto_run.py
+
+      - name: Persist Memory Database
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add shorts_agent.db
+          git commit -m "chore: update agent memory with new video topic" || echo "No changes to commit"
+          git push
 
       - name: Upload Generated Video Artifact
         uses: actions/upload-artifact@v4
