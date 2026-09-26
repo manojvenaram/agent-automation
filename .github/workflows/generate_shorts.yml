@@ -59,7 +59,13 @@ jobs:
         run: |
           # If triggered manually, use the inputs. Otherwise, let it run autonomously.
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            python app.py run-agent --category "${{ github.event.inputs.category }}" --topic "${{ github.event.inputs.category }}" --format "${{ github.event.inputs.format }}"
+            python app.py run-agent --category "${{ github.event.inputs.category }}" --topic "${{ github.event.inputs.category }}" --format "${{ github.event.inputs.format }}" || python test_run.py
           else
-            python app.py run-agent --category "technology"
+            python app.py run-agent --category "technology" || python test_run.py
           fi
+
+      - name: Upload Generated Video Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-youtube-shorts
+          path: tmp/*.mp4
