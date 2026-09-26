@@ -162,10 +162,44 @@ class MultiAgentOrchestrator:
         shot_reply = self.video_prompter.generate_reply(shot_msg, self._optimize_history())
         self.history.append({"sender": "VideoPrompter", "content": shot_reply})
         
+        # --- NEW PIPELINE INTEGRATION ---
+        try:
+            from backend.generation_engine.audio_models import AudioGenerationEngine
+            from backend.generation_engine.video_models import VideoGenerationEngine
+            from backend.pipeline.composer import VideoComposer
+            import os
+
+            audio_engine = AudioGenerationEngine()
+            video_engine = VideoGenerationEngine()
+            composer = VideoComposer()
+
+            # 1. Generate Voiceover from Script
+            logger.info("Starting Audio Generation...")
+            audio_path = audio_engine.generate_voiceover(script_reply)
+
+            # 2. Generate Video Clips (Mocked from the shot list)
+            # In a real app, you would parse the shot_reply into a list of specific prompts.
+            # Here we generate 3 clips of 3 seconds each to simulate.
+            logger.info("Starting Video B-roll Generation...")
+            video_clips = [
+                video_engine.generate_broll("Shot 1", duration=3),
+                video_engine.generate_broll("Shot 2", duration=3),
+                video_engine.generate_broll("Shot 3", duration=3)
+            ]
+
+            # 3. Assemble Final Video
+            logger.info("Starting Final Video Assembly...")
+            output_video = os.path.join(os.getcwd(), "tmp", f"final_video_{hash(script_reply)}.mp4")
+            final_path = composer.assemble_final_video(video_clips, audio_path, output_video)
+        except Exception as e:
+            logger.error(f"Pipeline generation failed: {e}")
+            final_path = None
+            
         return {
             "vision": vision_reply,
             "script": script_reply,
             "fact_check": fact_reply,
             "video_prompts": shot_reply,
-            "history": self.history
+            "history": self.history,
+            "final_video_path": final_path
         }
