@@ -12,6 +12,8 @@ from backend.core.config import settings
 
 import urllib.request
 import urllib.error
+import subprocess
+from gradio_client import Client, file
 
 class MocapPipeline(BaseRenderPipeline):
     """
@@ -67,13 +69,31 @@ class MocapPipeline(BaseRenderPipeline):
             # 1. Generate/Fetch source AI video automatically
             self._fetch_source_video(topic, source_vid)
             
-            # 2. Run estimate_pose_gvhmr.py (Requires CUDA/PyTorch)
-            # cmd_estimate = ["python", str(self.mocap_engine_dir / "pipeline" / "estimate_pose_gvhmr.py"), "--video", str(source_vid)]
-            # subprocess.run(cmd_estimate)
+            # 2. Call the Free Hugging Face ZeroGPU API for Pose Estimation
+            # Note: You will need to deploy the provided gradio_app.py to a HF Space
+            # and add HF_MOCAP_SPACE to your GitHub Secrets/env variables.
+            hf_space_url = os.getenv("HF_MOCAP_SPACE", "your-username/mixamo-mocap-zerogpu")
+            pose_data_path = visuals_dir / f"{asset_id}_pose.pkl"
             
-            # 3. Run analyze_landmarks.py & lift_to_mixamo.py
-            # 4. Run apply_mixamo_fk.py inside headless Blender via MCP
-            # 5. Export rendered MP4 back to target_mp4
+            try:
+                logger.info(f"Sending video to Hugging Face ZeroGPU Space ({hf_space_url}) for GVHMR pose estimation...")
+                client = Client(hf_space_url, hf_token=os.getenv("HF_API_KEY"))
+                result_file = client.predict(
+                    video=file(str(source_vid)),
+                    api_name="/estimate_pose"
+                )
+                shutil.copy(result_file, pose_data_path)
+                logger.info("Successfully received 3D pose data from ZeroGPU!")
+                
+                # 3. Run lift_to_mixamo.py locally (runs fine on CPU in GitHub Actions)
+                # subprocess.run(["python", str(self.mocap_engine_dir / "pipeline" / "lift_to_mixamo.py"), "--pose", str(pose_data_path)])
+                
+                # 4. Run apply_mixamo_fk.py inside headless Blender via MCP locally
+                # subprocess.run(["blender", "-b", "-P", str(self.mocap_engine_dir / "pipeline" / "apply_mixamo_fk.py")])
+                
+            except Exception as e:
+                logger.error(f"Hugging Face ZeroGPU API failed (is the space asleep?): {e}")
+                logger.info("Falling back to placeholder render...")
             
             # Stub: Create placeholder MP4 to keep pipeline unblocked until Blender is installed
             logger.info(f"Generating placeholder mocap render for scene {idx+1} at {target_mp4}")

@@ -28,4 +28,5 @@ browser-use>=0.1.0
 playwright>=1.40.0
 langchain-groq>=0.1.0
 agentmemory>=0.1.0
-moviepy==1.0.3
+moviepy==1.0.3
+gradio_client>=0.14.0
