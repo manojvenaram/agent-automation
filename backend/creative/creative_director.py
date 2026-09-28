@@ -202,8 +202,8 @@ class CreativeDirectorAgent:
         """
         Determines the optimal visual treatment style.
         """
-        # PER USER DIRECTIVE: Force Manim Programmatic Animations for everything
-        return VisualTreatment.ANIMATION
+        # PER USER DIRECTIVE: Force Brainrot Split-Screen Gameplay for everything
+        return VisualTreatment.SPLIT_SCREEN_STATIC
 
     def determine_direction(
         self,
