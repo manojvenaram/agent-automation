@@ -1,7 +1,10 @@
 import psutil
 import platform
 import os
-import pynvml
+import warnings
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", message=".*pynvml package is deprecated.*")
+    import pynvml
 from typing import Dict, Any
 from backend.core.logging import logger
 

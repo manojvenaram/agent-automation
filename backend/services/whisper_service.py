@@ -36,32 +36,61 @@ class WhisperService:
         ass_path.parent.mkdir(parents=True, exist_ok=True)
         srt_path = Path(output_srt_path or ass_path.with_suffix(".srt")).resolve()
 
-        # Split narration into punchy chunks of 3-5 words
-        words = full_text.split()
-        if not words:
-            words = ["Fact", "Checked", "Shorts"]
-
-        chunk_size = settings.caption_max_words_per_line
-        chunks = []
-        for i in range(0, len(words), chunk_size):
-            chunks.append(" ".join(words[i : i + chunk_size]))
-
-        # Distribute time proportionally across chunks based on character length
-        total_chars = sum(len(c) for c in chunks)
-        time_per_char = total_duration / max(1, total_chars)
-
+        # Try to use our new ZeroGPU Hugging Face Space for perfect word-level timestamps!
         sub_events = []
-        current_time = 0.2  # slight offset at start
-        for c in chunks:
-            chunk_duration = max(1.2, len(c) * time_per_char)
-            end_time = min(total_duration, current_time + chunk_duration)
-            sub_events.append((current_time, end_time, c))
-            current_time = end_time
-
-        # Ensure last event covers up to total duration
-        if sub_events:
-            last_start, _, last_text = sub_events[-1]
-            sub_events[-1] = (last_start, total_duration, last_text)
+        try:
+            from gradio_client import Client
+            logger.info("Calling ZeroGPU Whisper-V3 for word-level captions...")
+            client = Client("manojvibranium21/mixamo-mocap-zerogpu", hf_token=settings.hf_api_key if settings.hf_api_key else None)
+            
+            # Use gradio client to call our whisper endpoint
+            result = client.predict(
+                audio_file=audio_path,
+                api_name="/generate_captions"
+            )
+            
+            if "chunks" in result:
+                for chunk in result["chunks"]:
+                    chunk_text = chunk.get("text", "").strip()
+                    if not chunk_text:
+                        continue
+                    
+                    timestamps = chunk.get("timestamp", [0.0, 0.0])
+                    start = float(timestamps[0]) if timestamps[0] is not None else 0.0
+                    end = float(timestamps[1]) if timestamps[1] is not None else start + 0.3
+                    
+                    sub_events.append((start, end, chunk_text))
+                    
+                logger.info(f"ZeroGPU Whisper-V3 successfully returned {len(sub_events)} word-level timestamps!")
+            else:
+                logger.warning(f"Unexpected ZeroGPU response: {result}")
+                raise ValueError("No chunks returned")
+                
+        except Exception as e:
+            logger.warning(f"ZeroGPU Whisper failed ({e}). Falling back to algorithmic timing...")
+            # Fallback algorithmic timing
+            words = full_text.split()
+            if not words:
+                words = ["Fact", "Checked", "Shorts"]
+    
+            chunk_size = 2
+            chunks = []
+            for i in range(0, len(words), chunk_size):
+                chunks.append(" ".join(words[i : i + chunk_size]))
+    
+            total_chars = sum(len(c) for c in chunks)
+            time_per_char = total_duration / max(1, total_chars)
+    
+            current_time = 0.2
+            for c in chunks:
+                chunk_duration = max(1.2, len(c) * time_per_char)
+                end_time = min(total_duration, current_time + chunk_duration)
+                sub_events.append((current_time, end_time, c))
+                current_time = end_time
+    
+            if sub_events:
+                last_start, _, last_text = sub_events[-1]
+                sub_events[-1] = (last_start, total_duration, last_text)
 
         # Write SRT file
         self._write_srt(sub_events, srt_path)
@@ -112,7 +141,7 @@ PlayResY: {settings.video_height}
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: ShortsDefault,Arial,{settings.caption_font_size},&H00FFFFFF,&H0000FFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,4,2,5,60,60,0,1
+Style: ShortsDefault,Arial,{settings.caption_font_size},&H00FFFFFF,&H0000FFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,4,2,2,60,60,360,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -141,8 +170,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                     formatted_words = []
                     for j, word in enumerate(words):
                         if j == i:
-                            # Highlighted: Yellow & slightly larger
-                            fs_large = int(settings.caption_font_size * 1.15)
+                            # Highlighted: Yellow & much larger (30% increase for bouncy impact)
+                            fs_large = int(settings.caption_font_size * 1.30)
                             formatted_words.append(f"{{\\c&H0000FFFF&\\fs{fs_large}}}{word}{{\\c&H00FFFFFF&\\fs{settings.caption_font_size}}}")
                         else:
                             formatted_words.append(word)

@@ -2,6 +2,7 @@ import os
 import random
 import datetime
 from backend.agents.orchestrator import run_workflow
+from backend.agents.analytics_agent import analytics_agent
 from backend.core.database import list_projects, create_project
 from backend.services.llm_service import llm_service
 from backend.core.logging import logger
@@ -49,6 +50,12 @@ def generate_unique_topic():
 
 if __name__ == "__main__":
     logger.info("--- AUTONOMOUS VIDEO GENERATOR STARTED ---")
+    
+    # 0. Run analytics to fetch latest performance data
+    try:
+        analytics_agent.run_analytics_cycle()
+    except Exception as e:
+        logger.error(f"Analytics cycle failed: {e}")
     
     # 1. Generate a strictly unique topic
     topic = generate_unique_topic()

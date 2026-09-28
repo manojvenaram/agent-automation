@@ -98,6 +98,10 @@ class TTSService:
         out_path.parent.mkdir(parents=True, exist_ok=True)
         raw_output = str(out_path.with_name("raw_" + out_path.name))
 
+        if not text or not text.strip():
+            logger.error("TTS failed: Provided text is empty.")
+            raise ValueError("Cannot synthesize speech for empty text.")
+
         success = False
         
         # Try VoiceStudio first

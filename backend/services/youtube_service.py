@@ -18,7 +18,8 @@ from backend.core.logging import logger
 
 YOUTUBE_SCOPES = [
     "https://www.googleapis.com/auth/youtube.upload",
-    "https://www.googleapis.com/auth/youtube.readonly"
+    "https://www.googleapis.com/auth/youtube.readonly",
+    "https://www.googleapis.com/auth/youtube.force-ssl"
 ]
 
 
@@ -150,10 +151,10 @@ class YouTubeService:
             "url": published_url,
         }
 
-    def fetch_latest_comments(self, max_results: int = 50) -> List[Dict[str, str]]:
+    def fetch_unreplied_comments(self, max_results: int = 50) -> List[Dict[str, str]]:
         """
         Fetches the latest comments from the authenticated user's channel.
-        Returns a list of dicts: [{'text': str, 'author': str}]
+        Returns a list of dicts: [{'id': str, 'text': str, 'author': str}]
         """
         if not self.is_authenticated():
             logger.warning("YouTube authentication required to fetch comments.")
@@ -164,7 +165,7 @@ class YouTubeService:
             
             # Use commentThreads API to get recent comments across all videos
             request = youtube.commentThreads().list(
-                part="snippet",
+                part="snippet,replies",
                 allThreadsRelatedToChannelId="mine",
                 order="time",
                 maxResults=max_results,
@@ -176,17 +177,82 @@ class YouTubeService:
             
             for item in response.get("items", []):
                 snippet = item["snippet"]["topLevelComment"]["snippet"]
-                text = snippet.get("textDisplay", "")
-                author = snippet.get("authorDisplayName", "Viewer")
-                if text:
-                    comments.append({"text": text, "author": author})
+                total_reply_count = item["snippet"]["totalReplyCount"]
+                
+                # Only grab comments we haven't replied to
+                if total_reply_count == 0:
+                    text = snippet.get("textDisplay", "")
+                    author = snippet.get("authorDisplayName", "Viewer")
+                    comment_id = item["snippet"]["topLevelComment"]["id"]
+                    if text:
+                        comments.append({"id": comment_id, "text": text, "author": author})
                     
-            logger.info(f"Fetched {len(comments)} recent comments from YouTube.")
+            logger.info(f"Fetched {len(comments)} unreplied comments from YouTube.")
             return comments
             
         except Exception as e:
             logger.error(f"Failed to fetch YouTube comments: {e}")
             return []
+            
+    def reply_to_comment(self, comment_id: str, reply_text: str) -> bool:
+        """Autonomously replies to a viewer's comment."""
+        if not self.is_authenticated():
+            return False
+            
+        try:
+            youtube = self.get_authenticated_service()
+            youtube.comments().insert(
+                part="snippet",
+                body={
+                    "snippet": {
+                        "parentId": comment_id,
+                        "textOriginal": reply_text
+                    }
+                }
+            ).execute()
+            logger.info(f"Successfully replied to comment {comment_id}!")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to reply to comment: {e}")
+            return False
+
+    def fetch_video_stats(self, video_ids: List[str]) -> Dict[str, Dict[str, str]]:
+        """
+        Fetches basic statistics (views, likes, comments) for a list of video IDs.
+        Returns a dict mapping video_id to its stats dictionary.
+        """
+        if not self.is_authenticated() or not video_ids:
+            return {}
+
+        try:
+            youtube = self.get_authenticated_service()
+            stats_dict = {}
+            
+            # YouTube API allows up to 50 IDs per request
+            chunk_size = 50
+            for i in range(0, len(video_ids), chunk_size):
+                chunk = video_ids[i:i + chunk_size]
+                request = youtube.videos().list(
+                    part="statistics",
+                    id=",".join(chunk)
+                )
+                response = request.execute()
+                
+                for item in response.get("items", []):
+                    vid = item["id"]
+                    stats = item.get("statistics", {})
+                    stats_dict[vid] = {
+                        "viewCount": stats.get("viewCount", "0"),
+                        "likeCount": stats.get("likeCount", "0"),
+                        "commentCount": stats.get("commentCount", "0")
+                    }
+                    
+            logger.info(f"Fetched statistics for {len(stats_dict)} videos.")
+            return stats_dict
+            
+        except Exception as e:
+            logger.error(f"Failed to fetch video stats: {e}")
+            return {}
 
 
 # Global singleton instance

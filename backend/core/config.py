@@ -33,7 +33,7 @@ class AppConfig(BaseModel):
     # Environment & Operating Modes
     environment: str = Field(default="development")
     demo_mode: bool = Field(default=False)
-    auto_publish: bool = Field(default=True)
+    auto_publish: bool = Field(default=False)
     content_mode: str = Field(default="AUTONOMOUS")  # "AUTONOMOUS" or "MANUAL"
     host: str = Field(default="127.0.0.1")
     port: int = Field(default=8000)
@@ -43,8 +43,10 @@ class AppConfig(BaseModel):
     llm_provider: str = Field(default="groq")
     gemini_api_key: str = Field(default="")
     groq_api_key: str = Field(default="")
+    openrouter_api_key: str = Field(default="")
     hf_api_key: str = Field(default="")
-    groq_model: str = Field(default="llama-3.1-8b-instant")
+    nvidia_api_key: str = Field(default="")
+    groq_model: str = Field(default="openai/gpt-oss-20b")
     ollama_base_url: str = Field(default="http://localhost:11434")
     ollama_model: str = Field(default="qwen2.5:3b")
     llm_timeout: int = Field(default=60)
@@ -179,7 +181,9 @@ def load_config() -> AppConfig:
         "LLM_PROVIDER": "llm_provider",
         "GEMINI_API_KEY": "gemini_api_key",
         "GROQ_API_KEY": "groq_api_key",
+        "OPENROUTER_API_KEY": "openrouter_api_key",
         "HF_API_KEY": "hf_api_key",
+        "NVIDIA_API_KEY": "nvidia_api_key",
         "GROQ_MODEL": "groq_model",
         "OLLAMA_BASE_URL": "ollama_base_url",
         "OLLAMA_MODEL": "ollama_model",

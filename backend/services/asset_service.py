@@ -43,12 +43,79 @@ class AssetService:
             except Exception as e:
                 logger.warning(f"Could not generate procedural music: {e}")
 
-    def get_background_music(self, category: Optional[str] = None) -> Optional[str]:
-        """Select a suitable background music track from local library."""
+    def get_background_music(self, category: Optional[str] = None, topic: Optional[str] = None, duration: int = 15) -> Optional[str]:
+        """Generate a custom, copyright-free background track using Meta MusicGen on ZeroGPU."""
         music_files = list(MUSIC_DIR.glob("*.mp3")) + list(MUSIC_DIR.glob("*.wav"))
+        
+        # Determine mood
+        mood = "lofi ambient chill beats"
+        if category:
+            moods = {
+                "science": "mysterious sci-fi synthwave ambient",
+                "sports": "high energy phonk drift phonk",
+                "gaming": "upbeat retro 8-bit chiptune",
+                "comedy": "bouncy quirky cartoon background music",
+                "history": "epic cinematic orchestral background"
+            }
+            mood = moods.get(category.lower(), "lofi ambient chill beats")
+            
+        prompt = f"{mood} suitable for a short video about {topic or 'interesting facts'}"
+        
+        try:
+            from gradio_client import Client
+            import shutil
+            logger.info(f"Composing custom music on ZeroGPU for prompt: '{prompt}'...")
+            client = Client("manojvibranium21/mixamo-mocap-zerogpu", hf_token=settings.hf_api_key if settings.hf_api_key else None)
+            
+            result = client.predict(
+                prompt=prompt,
+                duration_sec=duration,
+                api_name="/generate_music"
+            )
+            
+            if result and os.path.exists(result):
+                clean_topic = (topic or "audio").replace(" ", "_").lower()[:15]
+                final_path = MUSIC_DIR / f"musicgen_{clean_topic}_{random.randint(100,999)}.wav"
+                shutil.copy(result, final_path)
+                logger.info(f"Successfully generated custom MusicGen track: {final_path.name}")
+                return str(final_path)
+                
+        except Exception as e:
+            logger.warning(f"ZeroGPU MusicGen failed ({e}). Falling back to local library...")
+        
+        # Fallback to local files
         if music_files:
-            chosen = random.choice(music_files)
-            return str(chosen)
+            return str(random.choice(music_files))
+        return None
+
+    def generate_video_asset(self, prompt: str, project_id: str, scene_idx: int) -> Optional[str]:
+        """Generates AI B-Roll video on the A100 ZeroGPU Space."""
+        try:
+            from gradio_client import Client
+            import shutil
+            logger.info(f"Generating AI B-Roll video on ZeroGPU for prompt: '{prompt}'...")
+            client = Client("manojvibranium21/mixamo-mocap-zerogpu", hf_token=settings.hf_api_key if settings.hf_api_key else None)
+            
+            result = client.predict(
+                prompt=prompt,
+                api_name="/generate_broll"
+            )
+            
+            if result and os.path.exists(result):
+                final_path = ASSETS_DIR / f"{project_id}_broll_scene_{scene_idx}.mp4"
+                shutil.copy(result, final_path)
+                
+                # Add to DB
+                self.save_assets(project_id, [VisualAsset(
+                    asset_id=f"broll_{scene_idx}",
+                    file_path=str(final_path),
+                    source_name="ZeroGPU Text-to-Video",
+                    is_procedural=True
+                )])
+                return str(final_path)
+                
+        except Exception as e:
+            logger.error(f"Failed to generate ZeroGPU B-Roll: {e}")
         return None
 
     def fetch_or_generate_visuals(
@@ -74,8 +141,17 @@ class AssetService:
             scene_desc = scene.get("visual_description") or topic
             narration_text = scene.get("narration", "")
 
-            # Primary visual generation via Pollinations.ai
+            # Primary visual generation via ZeroGPU Text-to-Video
             prompt_to_use = f"{topic}, {scene_desc}, {aesthetic_style}"
+            
+            # Try generating an AI Video first
+            ai_video_path = self.generate_video_asset(prompt=prompt_to_use, project_id=project_id, scene_idx=idx)
+            if ai_video_path:
+                scene["visual_path"] = ai_video_path
+                assets.append(VisualAsset(asset_id=asset_id, file_path=ai_video_path, source_name="ZeroGPU AI Video", is_procedural=True))
+                continue
+                
+            # Fallback to AI Image
             ai_success = self._generate_ai_visual(
                 output_path=target_file,
                 prompt=prompt_to_use,
@@ -154,20 +230,32 @@ class AssetService:
             }
         }
         
-        try:
-            with httpx.Client(timeout=120.0) as client:
-                logger.info(f"Generating image via HuggingFace FLUX.1-schnell...")
-                response = client.post(url, headers=headers, json=payload)
-                if response.status_code == 200:
-                    with open(output_path, "wb") as f:
-                        f.write(response.content)
-                    return True
-                else:
-                    logger.warning(f"HuggingFace API error: {response.status_code} - {response.text}")
-                    return False
-        except Exception as e:
-            logger.error(f"HuggingFace API request failed: {e}")
-            return False
+        import time
+        for attempt in range(4):
+            try:
+                with httpx.Client(timeout=120.0) as client:
+                    if attempt == 0:
+                        logger.info(f"Generating image via HuggingFace FLUX.1-schnell...")
+                    response = client.post(url, headers=headers, json=payload)
+                    if response.status_code == 503 and attempt < 3:
+                        logger.warning(f"HuggingFace model loading. Retrying in 15s...")
+                        time.sleep(15)
+                        continue
+                    if response.status_code == 200:
+                        with open(output_path, "wb") as f:
+                            f.write(response.content)
+                        return True
+                    else:
+                        logger.warning(f"HuggingFace API error: {response.status_code} - {response.text}")
+                        return False
+            except Exception as e:
+                if attempt < 3:
+                    logger.warning(f"HuggingFace API network issue ({e}). Retrying in {2 ** attempt}s...")
+                    time.sleep(2 ** attempt)
+                    continue
+                logger.error(f"HuggingFace API request failed after retries: {e}")
+                return False
+        return False
 
     def _generate_ai_visual(self, output_path: Path, prompt: str) -> bool:
         """

@@ -174,9 +174,9 @@ class CreativeDirectorAgent:
         if "mocap" in lower or "3d" in lower or "mixamo" in lower or "fight" in lower:
             return ShortsFormat.MIXAMO_MOCAP
             
-        # Strongly bias towards VIRAL_PROMPT for tech/AI topics (Must happen before low_resource override)
+        # Default tech/AI topics to Stickman explainer instead of the static viral prompt
         if cat in ["technology", "coding", "software"] or "prompt" in lower or "ai" in lower:
-            return ShortsFormat.VIRAL_PROMPT
+            return ShortsFormat.STICKMAN_EXPLAINER
 
         # In low resource mode, heavily bias toward simple formats
         if settings.render_mode == "low_resource":
@@ -227,7 +227,7 @@ class CreativeDirectorAgent:
             return VisualTreatment.MAPS
 
         if cat in ["technology", "gaming", "coding", "software"]:
-            return VisualTreatment.WEB_RENDER
+            return VisualTreatment.CINEMATIC
 
         if fmt in [ShortsFormat.TOP_3, ShortsFormat.TOP_5, ShortsFormat.COUNTDOWN]:
             return VisualTreatment.ORIGINAL_GRAPHICS
@@ -236,7 +236,7 @@ class CreativeDirectorAgent:
             return VisualTreatment.TEXT_ANIMATION
             
         if fmt in [ShortsFormat.REDDIT_STORY]:
-            return VisualTreatment.WEB_RENDER
+            return VisualTreatment.CINEMATIC
             
         if fmt in [ShortsFormat.DOCUMENTARY, ShortsFormat.LONG_FORM_DOCUMENTARY, ShortsFormat.LONG_FORM_ESSAY, ShortsFormat.MYSTERY, ShortsFormat.DRAMATIC_STORY, ShortsFormat.VIRAL_PROMPT]:
             return VisualTreatment.CINEMATIC

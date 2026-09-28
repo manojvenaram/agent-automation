@@ -223,9 +223,10 @@ class StickmanPipeline(BaseRenderPipeline):
                 self._draw_stickman(draw, self.width // 2, 1300, pose, frame_idx)
 
                 # Draw typewriter text
-                progress = min(1.0, (frame_idx / (total_frames * 0.7))) # Text finishes at 70% of scene
-                text_to_draw = sc.narration
-                self._draw_handwritten_text(draw, text_to_draw, self.width // 2, 500, 900, progress)
+                # We skip drawing handwritten text because ASS subtitles are already overlayed.
+                # progress = min(1.0, (frame_idx / (total_frames * 0.7)))
+                # text_to_draw = sc.narration
+                # self._draw_handwritten_text(draw, text_to_draw, self.width // 2, 500, 900, progress)
 
                 frame_path = frames_dir / f"frame_{frame_idx:04d}.png"
                 img.save(str(frame_path), quality=80)

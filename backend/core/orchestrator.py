@@ -129,7 +129,7 @@ class AgentOrchestrator:
                 if not has_run_today and getattr(settings, "youtube_comments_enabled", True):
                     try:
                         proj_logger.info("First run of the day: Fetching new viewer comments to memory...")
-                        recent_comments = youtube_service.fetch_latest_comments(max_results=30)
+                        recent_comments = youtube_service.fetch_unreplied_comments(max_results=30)
                         if recent_comments:
                             comment_engine.process_incoming_comments(recent_comments)
                         last_fetch_file.write_text(today_str)
@@ -353,6 +353,8 @@ class AgentOrchestrator:
                 job_queue.complete_job(task_id)
             update_project_state(pid, ProjectState.SCRIPT_READY)
             proj_logger.info(f"Script Generated: {len(scenes)} visual beats, {script.word_count} words (~{script.estimated_duration_sec}s)")
+            if script.word_count == 0 or len(script.scenes) == 0:
+                raise ValueError("Script generation returned an empty script. Rate limit or parsing issue.")
 
             # -------------------------------------------------------------
             # 7. FACT CHECKING & ACCURACY GUARDRAILS

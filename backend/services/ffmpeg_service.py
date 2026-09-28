@@ -144,8 +144,10 @@ class FFmpegService:
         zoom_direction: str = "in",
     ) -> str:
         """
-        Create a 1080x1920 30FPS MP4 video clip from a still image with Ken Burns pan/zoom effect.
+        [DEPRECATED] Create a 1080x1920 30FPS MP4 video clip from a still image with Ken Burns pan/zoom effect.
+        Please use video_gen_service.py instead for true cinematic video.
         """
+        logger.warning("DEPRECATED: create_still_scene_video is deprecated. Moving to VideoGenService.")
         out_dir = Path(output_path).parent
         out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -154,19 +156,19 @@ class FFmpegService:
         h = settings.video_height
 
         import random
-        effect = random.choice(["zoom_in", "zoom_out", "pan_left", "pan_right"])
-        if effect == "zoom_in":
-            zoom_expr = f"1.0+0.15*(on/{frames})"
+        effect = random.choice(["pop_bounce", "smooth_zoom", "smooth_zoom_out", "pan_left"])
+        if effect == "pop_bounce":
+            zoom_expr = "if(lt(on,10), 0.5+(on/10)*0.6, if(lt(on,20), 1.1-((on-10)/10)*0.1, 1.0))"
             x_expr, y_expr = "'iw/2-(iw/zoom/2)'", "'ih/2-(ih/zoom/2)'"
-        elif effect == "zoom_out":
+        elif effect == "smooth_zoom_out":
             zoom_expr = f"1.15-0.15*(on/{frames})"
             x_expr, y_expr = "'iw/2-(iw/zoom/2)'", "'ih/2-(ih/zoom/2)'"
         elif effect == "pan_left":
             zoom_expr = "1.15"
             x_expr = f"'(iw-iw/zoom/2)-(on/{frames})*(iw-iw/zoom)'"
             y_expr = "'ih/2-(ih/zoom/2)'"
-        else: # pan_right
-            zoom_expr = "1.15"
+        else: # smooth_zoom
+            zoom_expr = f"1.0+0.15*(on/{frames})"
             x_expr = f"'(iw/zoom/2)+(on/{frames})*(iw-iw/zoom)'"
             y_expr = "'ih/2-(ih/zoom/2)'"
 
@@ -265,25 +267,49 @@ class FFmpegService:
         scene_video_paths: List[str],
         output_path: str,
     ) -> str:
-        """Concatenate multiple scene video files into one video."""
+        """Concatenate multiple scene video files into one video using trendy xfade transitions."""
         out_dir = Path(output_path).parent
         out_dir.mkdir(parents=True, exist_ok=True)
-
-        concat_list_file = out_dir / "concat_list.txt"
-        with open(concat_list_file, "w", encoding="utf-8") as f:
-            for vp in scene_video_paths:
-                # Escape backslashes for ffmpeg concat demuxer
-                clean_path = str(Path(vp).resolve()).replace("\\", "/")
-                f.write(f"file '{clean_path}'\n")
-
-        args = [
-            "-y",
-            "-f", "concat",
-            "-safe", "0",
-            "-i", str(concat_list_file),
+        
+        if len(scene_video_paths) == 1:
+            shutil.copy(scene_video_paths[0], output_path)
+            return output_path
+            
+        args = ["-y"]
+        durations = []
+        for vp in scene_video_paths:
+            args.extend(["-i", vp])
+            info = self.probe_file(vp)
+            durations.append(info.get("duration", 5.0))
+            
+        import random
+        transitions = ["hblur", "pixelize", "slideleft", "slideright", "slideup", "circleopen", "fade", "wiperight"]
+        t_duration = 0.5
+        
+        filter_str = ""
+        current_offset = durations[0] - t_duration
+        
+        for i in range(1, len(scene_video_paths)):
+            trans = random.choice(transitions)
+            in1 = "[0:v]" if i == 1 else f"[v{i-1}]"
+            in2 = f"[{i}:v]"
+            out = f"[v{i}]" if i < len(scene_video_paths) - 1 else "[vout]"
+            
+            # xfade requires identical resolution and timebase
+            filter_str += f"{in1}{in2}xfade=transition={trans}:duration={t_duration}:offset={current_offset:.2f}{out};"
+            
+            if i < len(scene_video_paths) - 1:
+                current_offset = current_offset + durations[i] - t_duration
+                
+        filter_str = filter_str.rstrip(";")
+        
+        args.extend([
+            "-filter_complex", filter_str,
+            "-map", "[vout]",
             "-c:v", "libx264",
-            "-pix_fmt", "yuv420p",
-        ]
+            "-pix_fmt", "yuv420p"
+        ])
+        
         if settings.render_mode == "low_resource":
             args.extend(["-preset", "ultrafast", "-threads", "1"])
         else:
@@ -291,12 +317,22 @@ class FFmpegService:
             
         args.append(output_path)
 
-        ret, stdout, stderr = self.run_command(args, timeout=180)
+        ret, stdout, stderr = self.run_command(args, timeout=300)
         if ret != 0:
-            raise RuntimeError(f"FFmpeg scene concatenation failed: {stderr}")
-
-        if concat_list_file.exists():
-            concat_list_file.unlink()
+            logger.warning(f"FFmpeg xfade concatenation failed: {stderr[:200]}")
+            # Fallback to concat demuxer
+            concat_list_file = out_dir / "concat_list.txt"
+            with open(concat_list_file, "w", encoding="utf-8") as f:
+                for vp in scene_video_paths:
+                    clean_path = str(Path(vp).resolve()).replace("\\", "/")
+                    f.write(f"file '{clean_path}'\n")
+            args_fb = [
+                "-y", "-f", "concat", "-safe", "0", "-i", str(concat_list_file),
+                "-c:v", "libx264", "-pix_fmt", "yuv420p", output_path
+            ]
+            self.run_command(args_fb, timeout=180)
+            if concat_list_file.exists():
+                concat_list_file.unlink()
 
         return output_path
 
@@ -307,7 +343,9 @@ class FFmpegService:
         output_path: str,
         subtitles_file: Optional[str] = None,
         background_music: Optional[str] = None,
+        sfx_file: Optional[str] = None,
         music_volume: float = 0.10,
+        avatar_video: Optional[str] = None,
     ) -> str:
         """
         Merge video, narration audio, background music (ducked), and burn-in subtitles.
@@ -325,8 +363,14 @@ class FFmpegService:
         # Build FFmpeg command inputs
         args = ["-y", "-i", video_input, "-i", voiceover_audio]
 
-        # Add procedural SFX input (Index 2)
-        args.extend(["-f", "lavfi", "-i", "anoisesrc=d=1.5:c=pink,afade=t=out:d=1.5,volume=0.25"])
+        # Add SFX input (Index 2)
+        if sfx_file and os.path.exists(sfx_file):
+            args.extend(["-i", sfx_file])
+            has_sfx = True
+        else:
+            # Procedural fallback
+            args.extend(["-f", "lavfi", "-i", "anoisesrc=d=1.5:c=pink,afade=t=out:d=1.5,volume=0.10"])
+            has_sfx = True
 
         filter_complex = []
         audio_out_label = "[aout]"
@@ -339,15 +383,32 @@ class FFmpegService:
             # Amix Voice (1) and SFX (2)
             filter_complex.append(f"[1:a][2:a]amix=inputs=2:duration=first:dropout_transition=2{audio_out_label}")
 
-        # Video filter for subtitles
+        # Video filter for subtitles and avatar
         video_map_label = "0:v"
+        
+        # Determine the input index for the avatar video
+        current_input_idx = 3
+        if background_music and os.path.exists(background_music):
+            current_input_idx += 1
+            
+        current_v_label = video_map_label
+        if avatar_video and os.path.exists(avatar_video):
+            args.extend(["-i", avatar_video])
+            # Scale avatar to 360px wide (1/3 of 1080p), keep aspect ratio, then overlay
+            filter_complex.append(f"[{current_input_idx}:v]scale=360:-1[av];[{current_v_label}][av]overlay=x=50:y=H-h-200[vwithavatar]")
+            current_v_label = "vwithavatar"
+
         if subtitles_file and os.path.exists(subtitles_file):
             # Clean path with escaped colons and slashes for subtitles filter
             sub_escaped = str(Path(subtitles_file).resolve()).replace("\\", "/").replace(":", "\\:")
-            filter_complex.append(f"[{video_map_label}]subtitles=filename='{sub_escaped}'[vout]")
+            filter_complex.append(f"[{current_v_label}]subtitles=filename='{sub_escaped}'[vout]")
             video_out_label = "[vout]"
         else:
-            video_out_label = f"[{video_map_label}]"
+            if current_v_label != video_map_label:
+                filter_complex.append(f"[{current_v_label}]copy[vout]")
+                video_out_label = "[vout]"
+            else:
+                video_out_label = f"[{video_map_label}]"
 
         if filter_complex:
             args.extend(["-filter_complex", ";".join(filter_complex)])

@@ -49,7 +49,8 @@ class ScriptWriterAgent:
             f"   - cta: Short 1-sentence prompt.\n"
             f"3. Do NOT use filler words like 'welcome back', 'in this video', or 'hey guys'.\n"
             f"4. Provide 4 to 6 scenes with duration_est and visual_description.\n"
-            f"5. CRITICAL: Never reuse scripts, narratives, or specific visuals from previous videos. Everything must be 100% unique and original.\n"
+            f"5. CRITICAL: Do NOT include stage directions, music cues, bracketed text, or directorial instructions (e.g. (Music plays) or [Upbeat intro]) in the narration fields. The text will be read EXACTLY as is by a TTS engine.\n"
+            f"6. CRITICAL: Never reuse scripts, narratives, or specific visuals from previous videos. Everything must be 100% unique and original.\n"
             f"Output strictly JSON:\n"
             f'{{"hook": "...", "context": "...", "main_facts": "...", "payoff": "...", "cta": "...", "scenes": [{{"scene_index": 1, "narration": "...", "duration_est": 4.0, "visual_description": "..."}}]}}'
         )

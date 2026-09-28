@@ -68,31 +68,17 @@ class FactCheckerAgent:
             logger.warning(f"LLM fact extraction parsing failed ({e}), evaluating heuristically.")
 
         if not claims:
-            # Heuristic assertion verification
+            # Safe fallback if LLM extraction fails
             claims = [
                 FactualClaim(
-                    claim_text="Astronauts report a distinct odor when returning from spacewalks",
-                    status=ClaimStatus.VERIFIED,
-                    confidence=0.98,
-                    evidence="Documented in NASA post-flight astronaut debriefs and published scientific papers.",
+                    claim_text="General script assertions (LLM parsing failed)",
+                    status=ClaimStatus.UNCERTAIN,
+                    confidence=0.50,
+                    evidence="Could not extract and verify specific claims automatically. Flagged for review.",
                     source_url=sources[0].url if sources else None,
-                ),
-                FactualClaim(
-                    claim_text="Polycyclic aromatic hydrocarbons are present in outer space",
-                    status=ClaimStatus.VERIFIED,
-                    confidence=0.95,
-                    evidence="Confirmed by infrared space spectroscopy missions including Spitzer Space Telescope.",
-                    source_url=sources[0].url if sources else None,
-                ),
-                FactualClaim(
-                    claim_text="Oxidation occurs upon repressurization of airlocks",
-                    status=ClaimStatus.VERIFIED,
-                    confidence=0.90,
-                    evidence="Chemical reaction between oxygen and adhered interstellar molecules.",
-                    source_url=sources[0].url if sources else None,
-                ),
+                )
             ]
-            overall_confidence = 0.94
+            overall_confidence = 0.50
 
         save_claims(project_id, claims)
         passed = overall_confidence >= self.threshold

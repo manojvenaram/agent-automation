@@ -6,11 +6,12 @@ Provides control over generation, inspection, review, and publishing.
 import os
 from pathlib import Path
 from typing import Dict, List, Optional, Any
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+import asyncio
 
 from backend.core.config import settings, PROJECTS_DIR, BASE_DIR
 from backend.core.database import (
@@ -356,8 +357,34 @@ def submit_viewer_comments(req: CommentSubmissionRequest) -> Dict[str, Any]:
 
 
 # ==========================================
-# Static Dashboard Frontend Mounting
+# Static Dashboard Frontend Mounting & WebSockets
 # ==========================================
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    try:
+        while True:
+            await asyncio.sleep(2.0)
+            projects = list_projects(limit=100)
+            jobs = list_jobs(limit=30)
+            
+            result = []
+            for p in projects:
+                p_dict = p.model_dump()
+                video_exists = (p.video_path and os.path.exists(p.video_path)) or (PROJECTS_DIR / p.id / "render" / "final.mp4").exists()
+                if video_exists:
+                    p_dict["stream_url"] = f"/media/{p.id}/render/final.mp4"
+                result.append(p_dict)
+                
+            import json
+            await websocket.send_text(json.dumps({
+                "type": "update",
+                "projects": result,
+                "jobs": jobs
+            }))
+    except WebSocketDisconnect:
+        pass
 
 
 FRONTEND_DIR = BASE_DIR / "frontend"

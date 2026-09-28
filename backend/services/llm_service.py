@@ -20,18 +20,24 @@ class LLMService:
         self.provider = settings.llm_provider.lower()
         self.api_key = (settings.gemini_api_key or "").strip()
         self.groq_key = (settings.groq_api_key or "").strip()
+        self.nvidia_key = (settings.nvidia_api_key or "").strip()
+        self.openrouter_key = (settings.openrouter_api_key or "").strip()
         
         if self.provider == "gemini":
             self.model_name = "gemini-2.5-flash"
         elif self.provider == "groq":
             self.model_name = settings.groq_model
+        elif self.provider == "nvidia":
+            self.model_name = "meta/llama-3.1-70b-instruct"
+        elif self.provider == "openrouter":
+            self.model_name = "google/gemini-2.5-flash:free"
         else:
             self.model_name = settings.ollama_model
             
-        self.client = genai.Client(api_key=self.api_key) if (self.api_key and self.provider == "gemini") else None
+        self.client = genai.Client(api_key=self.api_key) if self.api_key else None
 
     def is_available(self) -> bool:
-        if self.provider in ["ollama", "groq"]:
+        if self.provider in ["ollama", "groq", "nvidia"]:
             return True
         return bool(self.api_key)
 
@@ -72,33 +78,126 @@ class LLMService:
     ) -> str:
         active_provider = provider_override or self.provider
 
-        if active_provider == "groq":
-            try:
-                url = "https://api.groq.com/openai/v1/chat/completions"
-                headers = {
-                    "Authorization": f"Bearer {self.groq_key}",
-                    "Content-Type": "application/json"
-                }
-                messages = []
-                if system_prompt:
-                    messages.append({"role": "system", "content": system_prompt})
-                messages.append({"role": "user", "content": prompt})
+        if active_provider == "nvidia":
+            import time
+            url = "https://integrate.api.nvidia.com/v1/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {self.nvidia_key}",
+                "Content-Type": "application/json"
+            }
+            messages = []
+            if system_prompt:
+                messages.append({"role": "system", "content": system_prompt})
+            messages.append({"role": "user", "content": prompt})
 
-                payload = {
-                    "model": settings.groq_model,
-                    "messages": messages,
-                    "temperature": temperature if temperature is not None else settings.llm_temperature,
-                }
-                if json_mode:
-                    payload["response_format"] = {"type": "json_object"}
-                
-                with httpx.Client(timeout=timeout or settings.llm_timeout) as client:
-                    response = client.post(url, headers=headers, json=payload)
-                    response.raise_for_status()
-                    return response.json()["choices"][0]["message"]["content"]
-            except Exception as e:
-                logger.warning(f"Groq request failed ({e}). Utilizing rule-based fallback generator.")
-                return self._generate_fallback(prompt, json_mode)
+            payload = {
+                "model": "meta/llama-3.1-70b-instruct",
+                "messages": messages,
+                "temperature": temperature if temperature is not None else settings.llm_temperature,
+                "max_tokens": 1024,
+            }
+            if json_mode:
+                payload["response_format"] = {"type": "json_object"}
+            
+            for attempt in range(4):
+                try:
+                    with httpx.Client(timeout=timeout or settings.llm_timeout) as client:
+                        response = client.post(url, headers=headers, json=payload)
+                        response.raise_for_status()
+                        return response.json()["choices"][0]["message"]["content"]
+                except httpx.HTTPStatusError as e:
+                    if e.response.status_code == 429 and attempt < 3:
+                        logger.warning(f"NVIDIA rate limit hit. Retrying in {2 ** attempt}s...")
+                        time.sleep(2 ** attempt)
+                        continue
+                    logger.warning(f"NVIDIA request failed ({e}). Utilizing rule-based fallback generator.")
+                    return self._generate_fallback(prompt, json_mode)
+                except Exception as e:
+                    if attempt < 3:
+                        time.sleep(1)
+                        continue
+                    logger.warning(f"NVIDIA request failed ({e}). Utilizing rule-based fallback generator.")
+                    return self._generate_fallback(prompt, json_mode)
+
+        if active_provider == "openrouter":
+            import time
+            url = "https://openrouter.ai/api/v1/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {self.openrouter_key}",
+                "Content-Type": "application/json"
+            }
+            messages = []
+            if system_prompt:
+                messages.append({"role": "system", "content": system_prompt})
+            messages.append({"role": "user", "content": prompt})
+
+            payload = {
+                "model": "google/gemini-2.5-flash:free",
+                "messages": messages,
+                "temperature": temperature if temperature is not None else settings.llm_temperature,
+            }
+            if json_mode:
+                payload["response_format"] = {"type": "json_object"}
+            
+            for attempt in range(4):
+                try:
+                    with httpx.Client(timeout=timeout or settings.llm_timeout) as client:
+                        response = client.post(url, headers=headers, json=payload)
+                        response.raise_for_status()
+                        return response.json()["choices"][0]["message"]["content"]
+                except httpx.HTTPStatusError as e:
+                    if e.response.status_code == 429 and attempt < 3:
+                        logger.warning(f"OpenRouter rate limit hit. Retrying in {2 ** attempt}s...")
+                        time.sleep(2 ** attempt)
+                        continue
+                    logger.warning(f"OpenRouter request failed ({e}). Utilizing rule-based fallback generator.")
+                    return self._generate_fallback(prompt, json_mode)
+                except Exception as e:
+                    if attempt < 3:
+                        time.sleep(1)
+                        continue
+                    logger.warning(f"OpenRouter request failed ({e}). Utilizing rule-based fallback generator.")
+                    return self._generate_fallback(prompt, json_mode)
+
+        if active_provider == "groq":
+            import time
+            url = "https://api.groq.com/openai/v1/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {self.groq_key}",
+                "Content-Type": "application/json"
+            }
+            messages = []
+            if system_prompt:
+                messages.append({"role": "system", "content": system_prompt})
+            messages.append({"role": "user", "content": prompt})
+
+            payload = {
+                "model": settings.groq_model,
+                "messages": messages,
+                "temperature": temperature if temperature is not None else settings.llm_temperature,
+            }
+            if json_mode:
+                payload["response_format"] = {"type": "json_object"}
+            
+            for attempt in range(4):
+                try:
+                    with httpx.Client(timeout=timeout or settings.llm_timeout) as client:
+                        response = client.post(url, headers=headers, json=payload)
+                        response.raise_for_status()
+                        return response.json()["choices"][0]["message"]["content"]
+                except httpx.HTTPStatusError as e:
+                    if e.response.status_code == 429 and attempt < 3:
+                        logger.warning(f"Groq rate limit hit. Retrying in {2 ** attempt}s...")
+                        time.sleep(2 ** attempt)
+                        continue
+                    logger.warning(f"Groq request failed ({e}). Utilizing rule-based fallback generator.")
+                    return self._generate_fallback(prompt, json_mode)
+                except Exception as e:
+                    if attempt < 3:
+                        time.sleep(1)
+                        continue
+                    logger.warning(f"Groq request failed ({e}). Utilizing rule-based fallback generator.")
+                    return self._generate_fallback(prompt, json_mode)
 
         if active_provider == "ollama":
             try:
@@ -144,8 +243,20 @@ class LLMService:
             response = chat.send_message(prompt)
             return response.text
         except Exception as err:
-            logger.warning(f"Gemini request failed ({err}). Utilizing rule-based fallback generator.")
-
+            logger.warning(f"Primary request failed ({err}). Cascading to fallbacks...")
+            try:
+                if self.openrouter_key:
+                    logger.info("Falling back to OpenRouter...")
+                    return self.generate(prompt, system_prompt, json_mode, temperature, timeout, provider_override="openrouter")
+                elif self.nvidia_key:
+                    logger.info("Falling back to NVIDIA NIM...")
+                    return self.generate(prompt, system_prompt, json_mode, temperature, timeout, provider_override="nvidia")
+                elif self.groq_key:
+                    logger.info("Falling back to Groq...")
+                    return self.generate(prompt, system_prompt, json_mode, temperature, timeout, provider_override="groq")
+            except Exception as fallback_err:
+                logger.warning(f"Fallback cascade completely exhausted ({fallback_err}). Utilizing rule-based fallback generator.")
+            
         return self._generate_fallback(prompt, json_mode)
 
     def _generate_fallback(self, prompt: str, json_mode: bool) -> str:
@@ -188,6 +299,13 @@ class LLMService:
                     {"scene_index": 4, "narration": "When astronauts repressurize the airlock, these space particles react with oxygen.", "duration_est": 6.0, "visual_description": "Close up molecular particles interacting in atmosphere"},
                     {"scene_index": 5, "narration": "So the cosmos literally smells like a cosmic barbecue, floating across the universe for billions of years.", "duration_est": 7.0, "visual_description": "Vibrant cosmic galaxy cluster spinning"},
                     {"scene_index": 6, "narration": "Subscribe for more mind-blowing cosmic facts!", "duration_est": 3.5, "visual_description": "Dramatic space horizon with subscribe prompt"}
+                ],
+                "beats": [
+                    {"beat_name": "Hook", "narration": "Did you know that outer space smells like burnt steak?", "visual": "Astronaut floating in deep space against stars", "camera": "punch cut", "screen_text": "Space BBQ", "sfx": "whoosh"},
+                    {"beat_name": "Context", "narration": "Whenever astronauts return from a spacewalk and take off their helmets, they notice a distinct metallic, smoky aroma.", "visual": "Astronaut removing helmet inside airlock module", "camera": "slow zoom in", "screen_text": "Smoky Aroma", "sfx": ""},
+                    {"beat_name": "Fact", "narration": "NASA scientists found this smell comes from polycyclic aromatic hydrocarbons—high-energy molecules produced by dying stars.", "visual": "Nebula and dying supernova exploding in space", "camera": "pan right", "screen_text": "Dying Stars", "sfx": "bass_drop"},
+                    {"beat_name": "Explanation", "narration": "When astronauts repressurize the airlock, these space particles react with oxygen.", "visual": "Close up molecular particles interacting in atmosphere", "camera": "static", "screen_text": "Reaction", "sfx": ""},
+                    {"beat_name": "Payoff", "narration": "So the cosmos literally smells like a cosmic barbecue, floating across the universe for billions of years.", "visual": "Vibrant cosmic galaxy cluster spinning", "camera": "pull back", "screen_text": "Cosmic BBQ", "sfx": "whoosh"}
                 ]
             })
 
@@ -217,6 +335,16 @@ class LLMService:
                 "tags": ["space smell", "nasa", "astronauts", "universe", "science facts", "shorts"],
                 "pinned_comment": "Would you want to take a whiff of the cosmos? Let us know below! 👇"
             })
+
+        if "script" in lower_p and not json_mode:
+            # Fallback for Multi-Agent markdown table parsing
+            return """Here is your script:
+| Visual & Text-on-Screen Cues | Audio |
+|---|---|
+| Astronaut floating in deep space against stars | Did you know that outer space smells like burnt steak? |
+| Astronaut removing helmet inside airlock module | Whenever astronauts return from a spacewalk and take off their helmets, they notice a distinct metallic, smoky aroma. |
+| Nebula and dying supernova exploding in space | NASA scientists found this smell comes from polycyclic aromatic hydrocarbons. |
+| Vibrant cosmic galaxy cluster spinning | So the cosmos literally smells like a cosmic barbecue! |"""
 
         return "Outer space is filled with fascinating mysteries waiting to be uncovered."
 

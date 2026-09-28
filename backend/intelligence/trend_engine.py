@@ -284,8 +284,7 @@ class UniversalTrendEngine:
             logger.info(f"Generating {count} dynamic fallback topics using Gemini API...")
             res = llm_service.generate(
                 prompt=prompt,
-                json_mode=True,
-                provider_override="gemini"
+                json_mode=True
             )
             parsed = llm_service.parse_json_safely(res)
             if parsed and "topics" in parsed:

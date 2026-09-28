@@ -13,7 +13,7 @@ from backend.core.config import settings
 import urllib.request
 import urllib.error
 import subprocess
-from gradio_client import Client, file
+from gradio_client import Client, handle_file
 
 class MocapPipeline(BaseRenderPipeline):
     """
@@ -35,12 +35,16 @@ class MocapPipeline(BaseRenderPipeline):
         stock_url = "https://mazwai.com/videvo_files/video/free/2019-01/small_watermarked/181004_04_023_1080p_preview.webm"
         try:
             logger.info(f"Downloading source mocap video for query '{query}'...")
-            req = urllib.request.Request(stock_url, headers={'User-Agent': 'Mozilla/5.0'})
+            req = urllib.request.Request(stock_url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'})
             with urllib.request.urlopen(req) as response, open(output_path, 'wb') as out_file:
                 shutil.copyfileobj(response, out_file)
             return True
         except Exception as e:
-            logger.error(f"Failed to fetch source video: {e}")
+            logger.warning(f"Failed to fetch source video ({e}). Creating a dummy source video instead.")
+            ffmpeg_service.run_command([
+                "-y", "-f", "lavfi", "-i", f"color=c=gray:s={self.width}x{self.height}:d=2",
+                "-c:v", "libx264", "-pix_fmt", "yuv420p", str(output_path)
+            ], timeout=60)
             return False
 
     def render_assets(
@@ -79,7 +83,7 @@ class MocapPipeline(BaseRenderPipeline):
                 logger.info(f"Sending video to Hugging Face ZeroGPU Space ({hf_space_url}) for GVHMR pose estimation...")
                 client = Client(hf_space_url, hf_token=os.getenv("HF_API_KEY"))
                 result_file = client.predict(
-                    video=file(str(source_vid)),
+                    video=handle_file(str(source_vid)),
                     api_name="/estimate_pose"
                 )
                 shutil.copy(result_file, pose_data_path)
@@ -93,19 +97,13 @@ class MocapPipeline(BaseRenderPipeline):
                 
             except Exception as e:
                 logger.error(f"Hugging Face ZeroGPU API failed (is the space asleep?): {e}")
-                logger.info("Falling back to placeholder render...")
+                logger.info("Falling back to source video...")
             
-            # Stub: Create placeholder MP4 to keep pipeline unblocked until Blender is installed
-            logger.info(f"Generating placeholder mocap render for scene {idx+1} at {target_mp4}")
-            
-            # Create a 2 second black video
-            ret, out, err = ffmpeg_service.run_command([
-                "-y", "-f", "lavfi", "-i", f"color=c=black:s={self.width}x{self.height}:d=2",
-                "-c:v", "libx264", "-pix_fmt", "yuv420p", str(target_mp4)
-            ], timeout=60)
-            
-            if ret != 0:
-                logger.error(f"Failed to create placeholder video: {err}")
+            # Since Blender is not fully installed, use the source video directly as the asset
+            # instead of a black screen placeholder, so the final video actually has visuals!
+            logger.info(f"Using source video for scene {idx+1} at {target_mp4}")
+            shutil.copy(source_vid, target_mp4)
+
 
             assets.append(
                 VisualAsset(

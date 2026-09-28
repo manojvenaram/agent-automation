@@ -1,0 +1,4 @@
+gradio
+spaces
+torch
+torchvision

@@ -61,16 +61,20 @@ graph TD
 
 ## ✨ Core Features
 
-- 💸 **100% Free Stack**: Uses `Groq (Llama-3.1)` (Blazing Fast Free Tier) for scripting, `Gemini 1.5 Flash` for real-time autonomous trend brainstorming, Pexels API (Free), Edge-TTS (Free), Playwright (Free Web Rendering), and FFmpeg (Open Source).
-- 🧠 **Dynamic Dual-LLM Intelligence**: The agent actively monitors internet trends. If the internet is slow, it automatically falls back to Gemini to hallucinate 100% brand new, highly obscure topics across 17 categories (Gaming, Sports, Science, etc.).
+- 🚀 **ZeroGPU Space & AI Presenter**: We deployed a massive A100 GPU microservice on Hugging Face Spaces! It acts as the brain for heavy compute:
+  - **SadTalker AI Avatar Presenter**: Sends audio and an image to your ZeroGPU space, generating a lip-synced talking head presenter to overlay on your final video!
+  - **Insanely-Fast-Whisper V3**: Word-level timestamps in milliseconds for perfect subtitle sync.
+  - **FLUX.1 Schnell & Text-to-Video**: High-fidelity photorealistic AI image and B-roll generation.
+- 💸 **Indestructible Fallback Cascade (100% Free)**: The agent has a bulletproof survival mechanism for LLM rate limits: `Gemini -> OpenRouter -> NVIDIA NIM -> Groq -> Local Ollama -> Offline Rule-Based Generator`. It never stops producing.
+- 💬 **Autonomous Comment Responder**: The agent reads unreplied YouTube comments on its own videos, generates highly contextual and witty replies using its LLM brain, and posts them to drive engagement algorithms!
 - 🎭 **4 Visual Render Pipelines**: The agent routes topics to one of four completely distinct visual styles:
   1. `CinematicPipeline`: High-end documentary style with letterboxing, color-graded footage, and ambient music.
-  2. `HyperframesPipeline`: Web-rendered Playwright engine building custom HTML/CSS dynamic UI animations (like Reddit or HackerNews styles).
+  2. `HyperframesPipeline`: Web-rendered Playwright engine building custom HTML/CSS dynamic UI animations.
   3. `WhiteboardPipeline`: Doodle/stickman visual explainer using Pollinations AI.
   4. `CartoonPipeline`: 3D animated character styles using Pollinations AI.
 - 💾 **Semantic Deduplication**: The agent builds a semantic index of its memory using `TurboVec` and mathematically blocks duplicate topics via vector distance, ensuring it **never** uploads the same video twice.
 - 🎙️ **3-Tier Audio Engine**: Automatically cascades between local VoiceStudio (OpenAI TTS), Microsoft Edge-TTS, and offline Windows Pyttsx3. Generates its own procedural FFmpeg sine-wave music if you don't provide background tracks!
-- ⚡ **Automated Playwright Actions**: The GitHub Actions CI/CD automatically installs Chromium binaries to support headless web-UI rendering.
+- ⚡ **Automated GitHub Actions CI/CD**: We built a fully automated CI/CD pipeline (`agent.yml`) that triggers the agent every 4 hours on GitHub's cloud servers for free. It generates the video and stores it as an artifact!
 - 📱 **Telegram Bot Integration**: Directly uploads the finished AI video to your Telegram chat immediately after rendering.
 
 ---

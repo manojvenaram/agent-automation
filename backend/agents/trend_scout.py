@@ -50,22 +50,29 @@ class TrendScoutAgent:
 
         # 1. Fetch Real-time Trends
         live_trends = []
+        try:
+            import feedparser
+            logger.info(f"Fetching RSS Trends for category: {category or 'General'}")
+            if category == "technology":
+                feed = feedparser.parse("https://techcrunch.com/feed/")
+            elif category == "science":
+                feed = feedparser.parse("https://www.sciencedaily.com/rss/all.xml")
+            else:
+                feed = feedparser.parse("https://trends.google.com/trends/trendingsearches/daily/rss?geo=US")
+            
+            live_trends = [entry.title for entry in feed.entries[:10]]
+        except Exception as e:
+            logger.warning(f"RSS fetch failed: {e}")
+
         if category:
-            logger.info(f"Fetching DuckDuckGo News trends for category: '{category}'...")
+            logger.info(f"Fetching DuckDuckGo YouTube trends for category: '{category}'...")
             try:
                 from duckduckgo_search import DDGS
-                results = DDGS().news(keywords=category, max_results=15)
-                live_trends = [r.get('title', '') for r in results if r.get('title')]
+                # Scope to YouTube to find what is actively trending in video format
+                results = DDGS().text(keywords=f"{category} viral site:youtube.com", max_results=10)
+                live_trends.extend([r.get('title', '').replace(" - YouTube", "") for r in results if r.get('title')])
             except Exception as e:
                 logger.warning(f"DuckDuckGo search failed: {e}")
-        else:
-            logger.info("Fetching Google Trends Daily RSS (US)...")
-            try:
-                import feedparser
-                feed = feedparser.parse("https://trends.google.com/trends/trendingsearches/daily/rss?geo=US")
-                live_trends = [entry.title for entry in feed.entries[:20]]
-            except Exception as e:
-                logger.warning(f"Google Trends RSS failed: {e}")
 
         if not live_trends:
             live_trends = ["AI breakthroughs", "Space exploration", "Ancient mysteries", "Psychology facts"]

@@ -19,11 +19,33 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("hashchange", handleRouting);
   handleRouting();
 
-  // Periodic telemetry refresh
-  setInterval(() => {
-    loadProjects();
-    loadJobs();
-  }, 6000);
+  // Setup WebSocket for real-time updates
+  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const ws = new WebSocket(`${wsProtocol}//${window.location.host}/ws`);
+  
+  ws.onmessage = function(event) {
+    try {
+      const data = JSON.parse(event.data);
+      if (data.type === "update") {
+        allProjectsData = data.projects;
+        renderProjects(data.projects);
+        updateStats(data.projects);
+        
+        const runningJobs = data.jobs.filter(j => j.status === "RUNNING" || j.status === "PENDING");
+        document.getElementById("active-jobs-count").textContent = runningJobs.length;
+      }
+    } catch (e) {
+      console.error("WebSocket message parsing error:", e);
+    }
+  };
+
+  ws.onclose = function() {
+    console.warn("WebSocket closed. Falling back to HTTP polling.");
+    setInterval(() => {
+      loadProjects();
+      loadJobs();
+    }, 6000);
+  };
 });
 
 function handleRouting() {

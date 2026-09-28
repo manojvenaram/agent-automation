@@ -102,11 +102,12 @@ Output strictly valid JSON:
         response = self.ollama.generate(prompt=prompt, json_mode=True)
         data = self.ollama.parse_json_safely(response) or {}
 
-        worked_text = data.get("what_worked", "Continued success in core categories.")
-        failed_text = data.get("what_failed", "No major failures reported.")
-        surprised_text = data.get("what_surprised", "Performance remained stable.")
-        cat_insights = data.get("category_insights", "Maintained 80/20 portfolio split.")
-        lessons = data.get("lessons", "1. Maintain current strategy.")
+        import json
+        worked_text = json.dumps(data.get("what_worked", "Continued success.")) if isinstance(data.get("what_worked"), list) else str(data.get("what_worked", "Continued success."))
+        failed_text = json.dumps(data.get("what_failed", "No major failures.")) if isinstance(data.get("what_failed"), list) else str(data.get("what_failed", "No major failures."))
+        surprised_text = json.dumps(data.get("what_surprised", "Performance stable.")) if isinstance(data.get("what_surprised"), list) else str(data.get("what_surprised", "Performance stable."))
+        cat_insights = json.dumps(data.get("category_insights", "Maintained portfolio split.")) if isinstance(data.get("category_insights"), list) else str(data.get("category_insights", "Maintained portfolio split."))
+        lessons = json.dumps(data.get("lessons", "Maintain strategy.")) if isinstance(data.get("lessons"), list) else str(data.get("lessons", "Maintain strategy."))
 
         strategy_changes = "1. Adopted LLM insights."
 

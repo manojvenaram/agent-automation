@@ -21,8 +21,11 @@ token.pickle
 logs/
 
 # Large render directories
-projects/*/render/*.mp4
-projects/*/temp/
+projects/
+tmp/
+assets/temp/
+assets/video_cache/
+assets/audio_cache/
 
 # OS specific
 Thumbs.db
