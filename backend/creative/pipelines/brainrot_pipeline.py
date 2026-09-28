@@ -29,7 +29,6 @@ class BrainrotPipeline(BaseRenderPipeline):
         self.gameplay_urls = [
             "https://www.youtube.com/watch?v=n_Dv4JMiwK8", # Minecraft Parkour
             "https://www.youtube.com/watch?v=1F2bF21H3e4", # GTA V Car Jumping
-            "https://www.youtube.com/watch?v=N9yV-Fq2JmU", # Subway Surfers
         ]
 
     def _get_gameplay_video(self, url: str) -> str:
@@ -82,7 +81,7 @@ class BrainrotPipeline(BaseRenderPipeline):
                 ])
 
         # Get total duration of the gameplay video to pick a random starting point
-        total_dur_str, _, _ = ffmpeg_service.run_command(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", source_vid])
+        retcode, total_dur_str, _ = ffmpeg_service.run_command(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", source_vid])
         total_duration = float(total_dur_str.strip()) if total_dur_str.strip() else 60.0
 
         current_timestamp = random.uniform(0, max(0, total_duration - 60)) # Pick a random 60 second chunk to start
