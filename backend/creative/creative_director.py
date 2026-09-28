@@ -202,46 +202,8 @@ class CreativeDirectorAgent:
         """
         Determines the optimal visual treatment style.
         """
-        if settings.render_mode == "low_resource":
-            if fmt == ShortsFormat.REDDIT_STORY:
-                return VisualTreatment.PANNING_BACKGROUND
-            if fmt == ShortsFormat.WOULD_YOU_RATHER:
-                return VisualTreatment.SPLIT_SCREEN_STATIC
-            if fmt in [ShortsFormat.SHOWER_THOUGHTS, ShortsFormat.MOTIVATIONAL_QUOTE, ShortsFormat.DID_YOU_KNOW]:
-                return VisualTreatment.MINIMAL_TEXT_ONLY
-
-        cat = category.lower()
-        if fmt == ShortsFormat.MINI_CARTOON or cat == "cartoon":
-            return VisualTreatment.CARTOON
-            
-        if fmt == ShortsFormat.STICKMAN_EXPLAINER:
-            return VisualTreatment.WHITEBOARD_STICKMAN
-
-        if fmt == ShortsFormat.MIXAMO_MOCAP:
-            return VisualTreatment.MOCAP_3D
-
-        if fmt in [ShortsFormat.VISUAL_EXPERIMENT, ShortsFormat.ANIMATION, ShortsFormat.SIMULATION]:
-            return VisualTreatment.ANIMATION
-
-        if cat in ["geography", "history"] or fmt == ShortsFormat.TIMELINE:
-            return VisualTreatment.MAPS
-
-        if cat in ["technology", "gaming", "coding", "software"]:
-            return VisualTreatment.CINEMATIC
-
-        if fmt in [ShortsFormat.TOP_3, ShortsFormat.TOP_5, ShortsFormat.COUNTDOWN]:
-            return VisualTreatment.ORIGINAL_GRAPHICS
-
-        if cat == "news":
-            return VisualTreatment.TEXT_ANIMATION
-            
-        if fmt in [ShortsFormat.REDDIT_STORY]:
-            return VisualTreatment.CINEMATIC
-            
-        if fmt in [ShortsFormat.DOCUMENTARY, ShortsFormat.LONG_FORM_DOCUMENTARY, ShortsFormat.LONG_FORM_ESSAY, ShortsFormat.MYSTERY, ShortsFormat.DRAMATIC_STORY, ShortsFormat.VIRAL_PROMPT]:
-            return VisualTreatment.CINEMATIC
-
-        return VisualTreatment.CINEMATIC # Default everything else to cinematic if it's not a cartoon/stickman
+        # PER USER DIRECTIVE: Force Manim Programmatic Animations for everything
+        return VisualTreatment.ANIMATION
 
     def determine_direction(
         self,

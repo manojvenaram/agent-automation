@@ -12,6 +12,7 @@ from .mocap_pipeline import MocapPipeline
 
 # Register the default implementations
 pipeline_registry.register(VisualTreatment.CARTOON, ManimPipeline())  # Upgraded to Manim vector animation
+pipeline_registry.register(VisualTreatment.ANIMATION, ManimPipeline())
 pipeline_registry.register(VisualTreatment.WHITEBOARD_STICKMAN, StickmanPipeline())
 pipeline_registry.register(VisualTreatment.CINEMATIC, CinematicPipeline())
 pipeline_registry.register(VisualTreatment.WEB_RENDER, HyperframesPipeline())
