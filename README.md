@@ -67,11 +67,13 @@ graph TD
   - **FLUX.1 Schnell & Text-to-Video**: High-fidelity photorealistic AI image and B-roll generation.
 - 💸 **Indestructible Fallback Cascade (100% Free)**: The agent has a bulletproof survival mechanism for LLM rate limits: `Gemini -> OpenRouter -> NVIDIA NIM -> Groq -> Local Ollama -> Offline Rule-Based Generator`. It never stops producing.
 - 💬 **Autonomous Comment Responder**: The agent reads unreplied YouTube comments on its own videos, generates highly contextual and witty replies using its LLM brain, and posts them to drive engagement algorithms!
-- 🎭 **4 Visual Render Pipelines**: The agent routes topics to one of four completely distinct visual styles:
-  1. `CinematicPipeline`: High-end documentary style with letterboxing, color-graded footage, and ambient music.
-  2. `HyperframesPipeline`: Web-rendered Playwright engine building custom HTML/CSS dynamic UI animations.
-  3. `WhiteboardPipeline`: Doodle/stickman visual explainer using Pollinations AI.
-  4. `CartoonPipeline`: 3D animated character styles using Pollinations AI.
+- 🎭 **6 Visual Render Pipelines**: The agent routes topics to one of six completely distinct visual styles:
+  1. `BrainrotPipeline`: Highly viral Split-Screen Gameplay (Minecraft Parkour / GTA V) looping underneath captions.
+  2. `ManimPipeline`: Beautiful, programmatic 60FPS math and code vector animations (3Blue1Brown style).
+  3. `CinematicPipeline`: High-end documentary style with letterboxing, color-graded footage, and ambient music.
+  4. `HyperframesPipeline`: Web-rendered Playwright engine building custom HTML/CSS dynamic UI animations.
+  5. `WhiteboardPipeline`: Doodle/stickman visual explainer using Pollinations AI.
+  6. `CartoonPipeline`: 3D animated character styles using Pollinations AI.
 - 💾 **Semantic Deduplication**: The agent builds a semantic index of its memory using `TurboVec` and mathematically blocks duplicate topics via vector distance, ensuring it **never** uploads the same video twice.
 - 🎙️ **3-Tier Audio Engine**: Automatically cascades between local VoiceStudio (OpenAI TTS), Microsoft Edge-TTS, and offline Windows Pyttsx3. Generates its own procedural FFmpeg sine-wave music if you don't provide background tracks!
 - ⚡ **Automated GitHub Actions CI/CD**: We built a fully automated CI/CD pipeline (`agent.yml`) that triggers the agent every 4 hours on GitHub's cloud servers for free. It generates the video and stores it as an artifact!
