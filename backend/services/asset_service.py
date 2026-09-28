@@ -65,7 +65,7 @@ class AssetService:
             from gradio_client import Client
             import shutil
             logger.info(f"Composing custom music on ZeroGPU for prompt: '{prompt}'...")
-            client = Client("manojvibranium21/mixamo-mocap-zerogpu", hf_token=settings.hf_api_key if settings.hf_api_key else None)
+            client = Client("manojvibranium21/mixamo-mocap-zerogpu", token=settings.hf_api_key if settings.hf_api_key else None)
             
             result = client.predict(
                 prompt=prompt,
@@ -94,7 +94,7 @@ class AssetService:
             from gradio_client import Client
             import shutil
             logger.info(f"Generating AI B-Roll video on ZeroGPU for prompt: '{prompt}'...")
-            client = Client("manojvibranium21/mixamo-mocap-zerogpu", hf_token=settings.hf_api_key if settings.hf_api_key else None)
+            client = Client("manojvibranium21/mixamo-mocap-zerogpu", token=settings.hf_api_key if settings.hf_api_key else None)
             
             result = client.predict(
                 prompt=prompt,

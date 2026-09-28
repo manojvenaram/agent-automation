@@ -81,7 +81,7 @@ class MocapPipeline(BaseRenderPipeline):
             
             try:
                 logger.info(f"Sending video to Hugging Face ZeroGPU Space ({hf_space_url}) for GVHMR pose estimation...")
-                client = Client(hf_space_url, hf_token=os.getenv("HF_API_KEY"))
+                client = Client(hf_space_url, token=os.getenv("HF_API_KEY"))
                 result_file = client.predict(
                     video=handle_file(str(source_vid)),
                     api_name="/estimate_pose"

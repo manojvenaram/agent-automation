@@ -46,17 +46,17 @@ class VideoEditorAgent:
             asset = assets[idx % len(assets)]
             scene_out = str(temp_dir / f"scene_{idx+1:03d}.mp4")
             
-            # Alternate zoom directions for engaging visual dynamics
-            direction = "in" if idx % 2 == 0 else "out"
-            
-            logger.info(f"Rendering scene {idx+1}/{num_scenes} ({scene_duration:.2f}s, zoom: {direction})...")
             if asset.file_path.endswith('.mp4'):
+                logger.info(f"Rendering scene {idx+1}/{num_scenes} ({scene_duration:.2f}s, format: procedural_mp4)...")
                 ffmpeg_service.process_video_scene(
                     video_path=asset.file_path,
                     output_path=scene_out,
                     duration=scene_duration,
                 )
             else:
+                # Alternate zoom directions for engaging visual dynamics on static images
+                direction = "in" if idx % 2 == 0 else "out"
+                logger.info(f"Rendering scene {idx+1}/{num_scenes} ({scene_duration:.2f}s, format: static_image, zoom: {direction})...")
                 logger.info(f"Using VideoGenService to generate cinematic video for scene {idx+1}")
                 # Use Video Prompter prompt from script if available, else fallback to basic scene description
                 prompt = getattr(scene, 'visual_description', f"High quality cinematic 9:16 vertical video of {asset.file_path}")

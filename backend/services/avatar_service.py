@@ -28,7 +28,7 @@ class AvatarService:
             import shutil
             
             logger.info("Connecting to ZeroGPU Space for SadTalker Lip-Sync...")
-            client = Client("manojvibranium21/mixamo-mocap-zerogpu", hf_token=settings.hf_api_key if settings.hf_api_key else None)
+            client = Client("manojvibranium21/mixamo-mocap-zerogpu", token=settings.hf_api_key if settings.hf_api_key else None)
             
             result = client.predict(
                 audio_file=handle_file(audio_path),

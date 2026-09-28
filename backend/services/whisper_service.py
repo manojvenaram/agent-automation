@@ -41,7 +41,7 @@ class WhisperService:
         try:
             from gradio_client import Client
             logger.info("Calling ZeroGPU Whisper-V3 for word-level captions...")
-            client = Client("manojvibranium21/mixamo-mocap-zerogpu", hf_token=settings.hf_api_key if settings.hf_api_key else None)
+            client = Client("manojvibranium21/mixamo-mocap-zerogpu", token=settings.hf_api_key if settings.hf_api_key else None)
             
             # Use gradio client to call our whisper endpoint
             result = client.predict(
