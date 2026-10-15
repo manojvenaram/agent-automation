@@ -18,29 +18,19 @@ api = HfApi(token=HF_TOKEN)
 user = api.whoami()
 username = user["name"]
 
-REPO_NAME = "ltx-video-generator"
-REPO_ID = f"{username}/{REPO_NAME}"
+# Target space: defaulting to existing ChatGPT4 space or CLI argument
+target_repo = sys.argv[1] if len(sys.argv) > 1 else "ChatGPT4"
+REPO_ID = f"{username}/{target_repo}"
 SPACE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "spaces", "ltx_video_space"))
 
-print(f"Deploying to Hugging Face Space: {REPO_ID} ...")
+print(f"Deploying LTX Video Studio to Hugging Face Space: {REPO_ID} ...")
 
 try:
-    # Create repo if not exists
-    api.create_repo(
-        repo_id=REPO_ID,
-        repo_type="space",
-        space_sdk="gradio",
-        exist_ok=True,
-        private=False
-    )
-    print(f"Repository {REPO_ID} confirmed.")
-
-    # Upload files
     files_to_upload = ["app.py", "requirements.txt", "README.md"]
     for filename in files_to_upload:
         file_path = os.path.join(SPACE_DIR, filename)
         if os.path.exists(file_path):
-            print(f"Uploading {filename}...")
+            print(f"Uploading {filename} to {REPO_ID}...")
             api.upload_file(
                 path_or_fileobj=file_path,
                 path_in_repo=filename,
@@ -48,9 +38,12 @@ try:
                 repo_type="space"
             )
 
+    print("Triggering space restart...")
+    api.restart_space(repo_id=REPO_ID)
+
     print("\n=== DEPLOYMENT SUCCESSFUL ===")
     print(f"Your Hugging Face Space is live at:")
-    print(f"👉 https://huggingface.co/spaces/{REPO_ID}")
+    print(f"URL: https://huggingface.co/spaces/{REPO_ID}")
     print("===============================\n")
 
 except Exception as e:
