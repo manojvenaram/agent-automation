@@ -232,5 +232,30 @@ class ContentBrain:
         """Stores a nightly self-review report."""
         save_daily_review(review_date, successes, failures, lessons, strategy_changes)
 
+    def get_active_editorial_guidelines(self) -> str:
+        """
+        Retrieves recent strategic lessons and editorial guidelines
+        from nightly self-reviews to inject into generation prompts.
+        """
+        reviews = self.get_recent_reviews(limit=3)
+        if not reviews:
+            return "Focus on punchy 3-second hooks, clear visual progression, and crisp factual accuracy."
+
+        guidelines = []
+        for r in reviews:
+            lessons = r.get("lessons")
+            if lessons:
+                clean_lessons = lessons.strip("[]\"' ")
+                guidelines.append(f"- {clean_lessons}")
+            strategy = r.get("strategy_changes")
+            if strategy:
+                clean_strat = strategy.strip("[]\"' ")
+                guidelines.append(f"- {clean_strat}")
+
+        if not guidelines:
+            return "Focus on punchy 3-second hooks, clear visual progression, and crisp factual accuracy."
+
+        return "\n".join(guidelines[:5])
+
 
 content_brain = ContentBrain()

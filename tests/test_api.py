@@ -22,7 +22,11 @@ def test_api_projects_list():
     assert isinstance(response.json(), list)
 
 
-def test_api_generate_enqueue():
+def test_api_generate_enqueue(monkeypatch):
+    monkeypatch.setattr(
+        "backend.api.routes.job_manager.submit_generation_job",
+        lambda topic=None, category=None, auto_publish=False, **kwargs: "job_test1234"
+    )
     response = client.post(
         "/api/generate",
         json={"topic": "Test Short Topic", "category": "science", "auto_publish": False},

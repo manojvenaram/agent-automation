@@ -99,18 +99,17 @@ class TrendScoutAgent:
             for item in raw_list:
                 t = item.get("topic", "").strip()
                 
-                # Check semantic memory
+                # Check semantic memory via native MemoryManager
                 is_duplicate = False
                 try:
-                    from agentmemory import search_memory, create_memory
-                    results = search_memory("topics", t, n_results=1)
-                    if results and results[0]["distance"] < 0.2:
+                    from backend.memory.memory_manager import memory_manager
+                    if memory_manager.check_duplication(t, threshold=0.25):
                         is_duplicate = True
-                        logger.info(f"AgentMemory rejected duplicate topic: {t}")
+                        logger.info(f"MemoryManager rejected semantically duplicate topic: {t}")
                     else:
-                        create_memory("topics", t)
+                        memory_manager.store_memory("candidate_topic", t, {"category": item.get("category", category or "Trending")})
                 except Exception as e:
-                    pass
+                    logger.debug(f"Memory check skipped: {e}")
 
                 if t and not is_duplicate and not any(t.lower() in past.lower() for past in recent_topics):
                     candidates.append({

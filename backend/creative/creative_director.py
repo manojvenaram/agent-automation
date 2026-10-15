@@ -178,6 +178,18 @@ class CreativeDirectorAgent:
         if cat in ["technology", "coding", "software"] or "prompt" in lower or "ai" in lower:
             return ShortsFormat.STICKMAN_EXPLAINER
 
+        # Specific keyword heuristics
+        if "top 3" in lower:
+            return ShortsFormat.TOP_3
+        if "top 5" in lower or "countdown" in lower:
+            return ShortsFormat.TOP_5
+        if "mystery" in lower or "unsolved" in lower or cat == "mystery":
+            return ShortsFormat.MYSTERY
+        if "did you know" in lower:
+            return ShortsFormat.DID_YOU_KNOW
+        if "reddit" in lower or "aita" in lower:
+            return ShortsFormat.REDDIT_STORY
+
         # In low resource mode, heavily bias toward simple formats
         if settings.render_mode == "low_resource":
             low_resource_formats = [

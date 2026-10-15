@@ -7,7 +7,7 @@ from backend.agents.researcher import HookAgent
 from backend.agents.script_writer import ScriptWriterAgent
 from backend.agents.fact_checker import FactCheckerAgent
 from backend.agents.quality_control import QualityControlAgent
-from backend.services.ollama_service import ollama_service
+from backend.services.llm_service import llm_service
 from backend.models import (
     ResearchSource,
     ScriptModel,
@@ -32,6 +32,14 @@ def mock_ollama_for_unit_tests(monkeypatch):
                 ],
                 "best_hook": "Why does space smell like seared steak?",
             })
+        if ("claim" in lower_p or "fact" in lower_p or "peer-reviewer" in lower_p) and json_mode:
+            return json.dumps({
+                "claims": [
+                    {"claim_text": "Space has an aroma after spacewalks", "status": "VERIFIED", "confidence": 0.98, "evidence": "Documented by NASA astronaut debriefs."},
+                    {"claim_text": "Polycyclic aromatic hydrocarbons float through space", "status": "VERIFIED", "confidence": 0.95, "evidence": "Confirmed by space spectroscopy."},
+                ],
+                "overall_confidence": 0.96,
+            })
         if "script" in lower_p and json_mode:
             return json.dumps({
                 "hook": "Why does space smell like seared steak?",
@@ -47,17 +55,9 @@ def mock_ollama_for_unit_tests(monkeypatch):
                     {"scene_index": 5, "narration": "Subscribe for more cosmic secrets!", "duration_est": 3.0, "visual_description": "Galaxy rotation"},
                 ],
             })
-        if "claim" in lower_p and json_mode:
-            return json.dumps({
-                "claims": [
-                    {"claim_text": "Space has an aroma after spacewalks", "status": "VERIFIED", "confidence": 0.98, "evidence": "Documented by NASA astronaut debriefs."},
-                    {"claim_text": "Polycyclic aromatic hydrocarbons float through space", "status": "VERIFIED", "confidence": 0.95, "evidence": "Confirmed by space spectroscopy."},
-                ],
-                "overall_confidence": 0.96,
-            })
         return "Unit test fallback response"
 
-    monkeypatch.setattr(ollama_service, "generate", _mock_generate)
+    monkeypatch.setattr(llm_service, "generate", _mock_generate)
 
 
 def test_topic_evaluator_scoring():

@@ -98,7 +98,15 @@ class UniversalTrendEngine:
         hn_items = self._fetch_hackernews_signals()
         candidates.extend(hn_items)
 
-        # 4. Seasonal & Historical Milestones
+        # 4. Reddit Viral & Curiosity Signals (todayilearned, Damnthatsinteresting, science, space)
+        reddit_items = self._fetch_reddit_trends()
+        candidates.extend(reddit_items)
+
+        # 5. DuckDuckGo Trending Query Signals
+        ddg_items = self._fetch_duckduckgo_trends()
+        candidates.extend(ddg_items)
+
+        # 6. Seasonal & Historical Milestones
         calendar_items = self._get_calendar_milestones()
         candidates.extend(calendar_items)
 
@@ -212,6 +220,69 @@ class UniversalTrendEngine:
         except httpx.RequestError as e:
             logger.debug(f"HackerNews network error ({e})")
         return signals
+
+    def _fetch_reddit_trends(self) -> List[Dict[str, Any]]:
+        """Fetch viral curiosity topics from public Reddit JSON feeds (zero API keys)."""
+        signals = []
+        subreddits = [
+            ("todayilearned", "science"),
+            ("Damnthatsinteresting", "general"),
+            ("space", "space"),
+            ("science", "science"),
+        ]
+        reddit_headers = {
+            "User-Agent": "UniversalShortsAgent/2.0 (Public Research Bot; Contact: support@localagent.ai)"
+        }
+        for sub, default_cat in subreddits:
+            try:
+                url = f"https://www.reddit.com/r/{sub}/hot.json?limit=6"
+                with httpx.Client(headers=reddit_headers, timeout=5.0) as client:
+                    res = client.get(url)
+                    if res.status_code == 200:
+                        data = res.json()
+                        children = data.get("data", {}).get("children", [])
+                        for post in children:
+                            post_data = post.get("data", {})
+                            title = post_data.get("title", "").strip()
+                            # Clean "TIL that " or "TIL " prefixes
+                            cleaned_title = re.sub(r"^TIL\s*(that\s*)?", "", title, flags=re.IGNORECASE).strip()
+                            if cleaned_title and len(cleaned_title) > 20 and not post_data.get("over_18", False):
+                                cat = default_cat if default_cat != "general" else self._infer_category(cleaned_title)
+                                signals.append({
+                                    "topic": cleaned_title[:90] + ("..." if len(cleaned_title) > 90 else ""),
+                                    "category": cat,
+                                    "premise": f"Trending community post on r/{sub} with {post_data.get('ups', 100)}+ upvotes: {cleaned_title[:200]}",
+                                    "trend_type": "VIRAL",
+                                    "velocity": "HIGH",
+                                    "source_signal": f"Reddit r/{sub}",
+                                })
+            except Exception as e:
+                logger.debug(f"Reddit r/{sub} fetch error ({e})")
+        return signals
+
+    def _fetch_duckduckgo_trends(self) -> List[Dict[str, Any]]:
+        """Fetch trending queries via DuckDuckGo."""
+        signals = []
+        try:
+            from duckduckgo_search import DDGS
+            with DDGS() as ddgs:
+                results = list(ddgs.text("viral mind blowing discovery this week site:youtube.com", max_results=5))
+                for r in results:
+                    title = r.get("title", "").replace(" - YouTube", "").strip()
+                    body = r.get("body", "")
+                    if title and len(title) > 15:
+                        signals.append({
+                            "topic": title,
+                            "category": self._infer_category(title + " " + body),
+                            "premise": body[:200] if body else f"Viral YouTube discussion: {title}",
+                            "trend_type": "RISING",
+                            "velocity": "HIGH",
+                            "source_signal": "DuckDuckGo Discovery",
+                        })
+        except Exception as e:
+            logger.debug(f"DuckDuckGo trends fetch failed: {e}")
+        return signals
+
 
     def _get_calendar_milestones(self) -> List[Dict[str, Any]]:
         """Calendar and seasonal milestones."""

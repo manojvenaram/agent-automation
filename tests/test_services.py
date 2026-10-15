@@ -45,7 +45,9 @@ def test_subtitle_generation(tmp_path):
     assert srt_path.exists()
     ass_content = ass_path.read_text(encoding="utf-8")
     assert "ShortsDefault" in ass_content
-    assert "BURNT STEAK" in ass_content
+    assert "BURNT" in ass_content
+    assert "STEAK" in ass_content
+    assert "BURNT STEAK" in srt_path.read_text(encoding="utf-8")
 
 
 def test_wikipedia_research_provider():

@@ -34,9 +34,13 @@ class ScriptWriterAgent:
 
         research_summary = "\n".join([f"- {s.title}: {s.extract[:400]}" for s in sources])
 
+        from backend.learning.content_brain import content_brain
+        editorial_rules = content_brain.get_active_editorial_guidelines()
+
         prompt = (
             f"Topic: {topic}\n"
             f"Selected Hook: {hook}\n"
+            f"Active Editorial Guidelines:\n{editorial_rules}\n\n"
             f"Research Evidence:\n{research_summary}\n\n"
             f"Task: Write a viral, scientifically accurate 35-45 second YouTube Shorts script.\n"
             f"Rules:\n"

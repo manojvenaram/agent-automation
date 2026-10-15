@@ -34,3 +34,4 @@ Desktop.ini
 
 test_env/
 *.zip
+.gemini/

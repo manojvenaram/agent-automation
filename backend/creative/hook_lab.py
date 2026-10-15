@@ -135,13 +135,16 @@ Provide a JSON output with these keys and integer values:
         category: str,
         key_facts: str = "",
     ) -> List[CandidateHook]:
-        """
-        Generates at least 10 high-impact candidate hooks.
-        """
+        """Generates at least 10 high-impact candidate hooks."""
+        from backend.learning.content_brain import content_brain
+        editorial_rules = content_brain.get_active_editorial_guidelines()
+
         prompt = f"""
 You are the world's top YouTube Shorts hook specialist.
 Generate exactly 10 distinct, scroll-stopping hooks for this topic: "{topic}" (Category: {category}).
 Facts: {key_facts}
+Editorial Guidelines:
+{editorial_rules}
 
 Each hook must target one of these 10 psychology archetypes:
 1. Negative Frame
